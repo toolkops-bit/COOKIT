@@ -357,7 +357,6 @@
 
       if (data.type === 'ask_mode') {
         appendModeChoice(data.ingredients, data.filters || []);
-        history.push({ role: 'user', content: text });
         history.push({ role: 'assistant', content: `שאלתי איזה סוג מתכון עם ${data.ingredients.join(', ')}` });
       } else if (data.type === 'recipes') {
         appendSearchResults(data.recipes, data.ingredients);
@@ -483,35 +482,30 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
+  const _modeChoices = {};
+
   function appendModeChoice(ingredients, filters) {
     const chat = document.getElementById('chatArea');
     const div = document.createElement('div');
     div.className = 'msg bot';
     const id = 'mode-' + Date.now();
-    const ing = ingredients.join(', ');
-    const filtersJson = encodeURIComponent(JSON.stringify(filters));
-    const ingJson = encodeURIComponent(JSON.stringify(ingredients));
+    _modeChoices[id] = { ingredients, filters };
     div.innerHTML = `<div class="avatar">🍳</div>
-      <div class="bubble mode-choice-bubble">
-        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ing}</strong><br>איזה סוג מתכון תרצה?</div>
+      <div class="bubble mode-choice-bubble" id="${id}">
+        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ingredients.join(', ')}</strong><br>איזה סוג מתכון תרצה?</div>
         <div style="display:flex;gap:8px">
-          <button class="btn-mode-choice" onclick="chooseMode('search','${encodeURIComponent(ing)}','${filtersJson}','${id}')">
-            🔍 מתכון מהאינטרנט
-          </button>
-          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${encodeURIComponent(ing)}','${filtersJson}','${id}')">
-            ✨ מתכון מקורי AI
-          </button>
+          <button class="btn-mode-choice" onclick="chooseMode('search','${id}')">🔍 מתכון מהאינטרנט</button>
+          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${id}')">✨ מתכון מקורי AI</button>
         </div>
       </div>`;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
   }
 
-  async function chooseMode(mode, encodedIng, filtersJson, bubbleId) {
-    const ing = decodeURIComponent(encodedIng);
-    const filters = JSON.parse(decodeURIComponent(filtersJson));
-    // נטרל את הכפתורים
-    document.querySelectorAll(`#${bubbleId} .btn-mode-choice, .btn-mode-choice`).forEach(b => b.disabled = true);
+  async function chooseMode(mode, choiceId) {
+    const { ingredients, filters } = _modeChoices[choiceId] || {};
+    if (!ingredients) return;
+    document.querySelectorAll(`#${choiceId} .btn-mode-choice`).forEach(b => b.disabled = true);
 
     const label = mode === 'search' ? '🔍 חיפוש מהאינטרנט' : '✨ יצירה עם AI';
     appendMsg('user', label);
@@ -521,16 +515,16 @@
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `תמצא מתכון עם ${ing}`, mode, history: history.slice(-8) })
+        body: JSON.stringify({ message: `תמצא מתכון עם ${ingredients.join(', ')}`, mode, ingredients, filters, history: history.slice(-8) })
       });
       const data = await res.json();
       removeTyping(typingId);
       if (data.type === 'recipes') {
-        appendSearchResults(data.recipes, data.ingredients);
+        appendSearchResults(data.recipes, data.ingredients || ingredients);
       } else if (data.type === 'recipe') {
         appendRecipeBubble(data.recipe);
       } else {
-        appendMsg('bot', data.text || data.error);
+        appendMsg('bot', data.text || data.error || 'שגיאה, נסה שוב.');
       }
     } catch {
       removeTyping(typingId);
@@ -541,14 +535,20 @@
   function toggleSpeak(id) {
     const recipe = _recipes[id];
     if (!recipe) return;
-    if (isSpeaking) { speechSynthesis.cancel(); return; }
+    const btn = document.getElementById('speak-' + id);
+    if (isSpeaking) {
+      speechSynthesis.cancel();
+      isSpeaking = false;
+      document.querySelectorAll('.btn-speak-recipe').forEach(b => { b.classList.remove('speaking'); b.textContent = '🔊 קרא בקול'; });
+      return;
+    }
     const text = `${recipe.title}. ${recipe.description||''}. מרכיבים: ${(recipe.ingredients||[]).join(', ')}. הוראות הכנה: ${(recipe.instructions||[]).join('. ')}`;
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'he-IL';
     utt.rate = 0.92;
-    const btn = document.getElementById('speak-' + id);
     utt.onstart = () => { isSpeaking = true; if(btn){btn.classList.add('speaking');btn.textContent='⏹ עצור';} };
-    utt.onend = utt.onerror = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent='🔊 קרא בקול';} };
+    utt.onend = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent='🔊 קרא בקול';} };
+    utt.onerror = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent='🔊 קרא בקול';} };
     speechSynthesis.speak(utt);
   }
 

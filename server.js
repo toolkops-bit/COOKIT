@@ -419,7 +419,13 @@ query: שאלה חופשית אם chat`,
     } catch { intent = { action: 'chat', ingredients: [], filters: [], query: message }; }
 
     // שלב 2: בצע לפי כוונה
-    const forcedMode = req.body.mode; // 'search' | 'generate' — נבחר ע"י המשתמש
+    const forcedMode = req.body.mode;
+    const forcedIngredients = req.body.ingredients;
+    const forcedFilters = req.body.filters;
+    if (forcedIngredients?.length > 0) {
+      intent.ingredients = forcedIngredients;
+      intent.filters = forcedFilters || intent.filters;
+    }
 
     // אם יש מרכיבים ולא נבחר מצב — שאל קודם
     if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length > 0 && !forcedMode) {
