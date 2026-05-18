@@ -393,4 +393,8 @@ app.post('/api/search-more', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.get('/health', (req, res) => res.send('ok'));
-app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  const { importAll } = require('./gov-import');
+  importAll().catch(err => console.error('[startup] gov-import failed:', err.message));
+});
