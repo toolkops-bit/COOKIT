@@ -55,6 +55,28 @@
       justify-content: center;
       margin-top: 18px;
     }
+    .mode-cards {
+      display: flex;
+      gap: 10px;
+      margin: 18px 0 14px;
+      justify-content: center;
+    }
+    .mode-card {
+      background: white;
+      border: 2px solid #e8e0f8;
+      border-radius: 16px;
+      padding: 14px 12px;
+      flex: 1;
+      max-width: 150px;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-align: center;
+    }
+    .mode-card:hover { border-color: #8b5cf6; box-shadow: 0 4px 14px rgba(139,92,246,0.15); transform: translateY(-2px); }
+    .mode-icon { font-size: 26px; margin-bottom: 6px; }
+    .mode-title { font-size: 13px; font-weight: 700; color: #2d2d2d; margin-bottom: 4px; }
+    .mode-desc { font-size: 11px; color: #999; line-height: 1.4; }
+
     .suggestion-chip {
       background: white;
       border: 1.5px solid #d8cff0;
@@ -240,13 +262,27 @@
   <div class="welcome" id="welcome">
     <div class="icon">👨‍🍳</div>
     <h2>שלום! מה נבשל היום?</h2>
-    <p>שאל אותי על מתכונים, מרכיבים, רעיונות לארוחה<br>— כתוב או דבר בקול</p>
+    <p>כתוב לי מה יש לך במקרר, ואני אמצא מתכון<br>— כתוב או דבר בקול 🎤</p>
+
+    <div class="mode-cards">
+      <div class="mode-card" onclick="sendSuggestion('תחפש מתכונים עם עוף ואורז')">
+        <div class="mode-icon">🔍</div>
+        <div class="mode-title">חיפוש מהאינטרנט</div>
+        <div class="mode-desc">מתכונים אמיתיים מאתרי בישול ישראליים</div>
+      </div>
+      <div class="mode-card" onclick="sendSuggestion('תיצור לי מתכון מקורי עם עוף ואורז')">
+        <div class="mode-icon">✨</div>
+        <div class="mode-title">יצירה עם AI</div>
+        <div class="mode-desc">מתכון מקורי שנוצר במיוחד בשבילך</div>
+      </div>
+    </div>
+
     <div class="suggestions">
-      <div class="suggestion-chip" onclick="sendSuggestion('מה אפשר לבשל עם עוף ואורז?')">🍗 עוף ואורז</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('תחפש מתכונים עם עוף ואורז')">🍗 עוף ואורז</div>
       <div class="suggestion-chip" onclick="sendSuggestion('תיצור מתכון טבעוני מהיר')">🌱 טבעוני מהיר</div>
       <div class="suggestion-chip" onclick="sendSuggestion('רעיון לארוחת ערב רומנטית')">🕯️ ארוחה רומנטית</div>
-      <div class="suggestion-chip" onclick="sendSuggestion('מתכון עם מה שיש במקרר — ביצים, גבינה, עגבניות')">🥚 ביצים וגבינה</div>
-      <div class="suggestion-chip" onclick="sendSuggestion('עוגה פשוטה לשבת')">🎂 עוגה לשבת</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('תיצור מתכון עם ביצים וגבינה')">🥚 ביצים וגבינה</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('תחפש עוגה פשוטה לשבת')">🎂 עוגה לשבת</div>
     </div>
   </div>
 </div>
