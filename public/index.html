@@ -315,6 +315,10 @@
 </div>
 
 <script>
+  const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform())
+    ? 'https://cookit-production.up.railway.app'
+    : '';
+
   let history = [];
   let isSpeaking = false;
   let recognition = null;
@@ -343,7 +347,7 @@
     const typingId = appendTyping();
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history: history.slice(-8) })
@@ -427,7 +431,7 @@
     const url = decodeURIComponent(encodedUrl);
     const typingId = appendTyping();
     try {
-      const res = await fetch('/api/recipe-details', {
+      const res = await fetch(API_BASE + '/api/recipe-details', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, title })
@@ -513,7 +517,7 @@
     const typingId = appendTyping();
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: `תמצא מתכון עם ${ingredients.join(', ')}`, mode, ingredients, filters, history: history.slice(-8) })
