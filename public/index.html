@@ -572,7 +572,52 @@
   }
 
   // ── VOICE INPUT ──
-  function toggleVoice() {
+  async function toggleVoice() {
+    // Capacitor native path (Android APK)
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      const SR = window.Capacitor.Plugins.SpeechRecognition;
+      if (!SR) { appendMsg('bot', 'זיהוי קול לא זמין במכשיר זה.'); return; }
+
+      if (isListening) { SR.stop(); return; }
+
+      try {
+        const avail = await SR.available();
+        if (!avail.available) { appendMsg('bot', 'זיהוי קול לא נתמך במכשיר זה.'); return; }
+
+        const perm = await SR.requestPermissions();
+        if (perm.speechRecognition !== 'granted') {
+          appendMsg('bot', 'יש לאשר הרשאת מיקרופון בהגדרות האפליקציה.');
+          return;
+        }
+
+        isListening = true;
+        document.getElementById('btnMic').classList.add('listening');
+        const hint = document.getElementById('voiceHint');
+        hint.textContent = '🎤 מאזין... דבר עכשיו';
+        hint.classList.add('visible');
+
+        const result = await SR.start({ language: 'he-IL', maxResults: 1, popup: false, partialResults: false });
+        const text = result.matches && result.matches[0];
+        if (text) {
+          document.getElementById('msgInput').value = text;
+          hint.classList.remove('visible');
+          sendMessage();
+        } else {
+          hint.textContent = 'לא הצלחתי לשמוע, נסה שוב';
+          setTimeout(() => hint.classList.remove('visible'), 2000);
+        }
+      } catch (e) {
+        const hint = document.getElementById('voiceHint');
+        hint.textContent = 'שגיאה במיקרופון, נסה שוב';
+        setTimeout(() => hint.classList.remove('visible'), 2000);
+      } finally {
+        isListening = false;
+        document.getElementById('btnMic').classList.remove('listening');
+      }
+      return;
+    }
+
+    // Web browser fallback (Chrome desktop/mobile)
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       appendMsg('bot', 'הדפדפן לא תומך בזיהוי קול. נסה Chrome.');
       return;
