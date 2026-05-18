@@ -49,7 +49,7 @@
     }
     .ingredients-input input {
       width: 100%;
-      padding: 13px 18px 13px 50px;
+      padding: 13px 50px 13px 50px;
       border: 2px solid #e2d9d0;
       border-radius: 13px;
       font-size: 16px;
@@ -82,6 +82,76 @@
       justify-content: center;
     }
     .btn-add:hover { background: #7c3aed; }
+    .btn-mic {
+      position: absolute;
+      right: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: white;
+      color: #8b5cf6;
+      border: 2px solid #8b5cf6;
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-mic.listening {
+      background: #e53e3e;
+      border-color: #e53e3e;
+      color: white;
+      animation: pulse-mic 1s ease-in-out infinite;
+    }
+    @keyframes pulse-mic {
+      0%,100% { box-shadow: 0 0 0 0 rgba(229,62,62,0.4); }
+      50%      { box-shadow: 0 0 0 8px rgba(229,62,62,0); }
+    }
+    .voice-status {
+      font-size: 13px;
+      color: #8b5cf6;
+      text-align: center;
+      min-height: 18px;
+      margin-bottom: 6px;
+    }
+    .btn-whatsapp {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #25d366;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+      text-decoration: none;
+      margin-top: 12px;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-speak {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f5f0ff;
+      color: #7c3aed;
+      border: 1.5px solid #8b5cf6;
+      padding: 10px 16px;
+      border-radius: 13px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+      margin-top: 12px;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-speak.speaking { background: #8b5cf6; color: white; }
 
     .tags-container {
       display: flex;
@@ -530,16 +600,18 @@
     <button class="filter-btn" onclick="toggleFilter(this, 'ללא גלוטן')">🌾 ללא גלוטן</button>
     <button class="filter-btn" onclick="toggleFilter(this, 'טבעוני')">🌱 טבעוני</button>
   </div>
+  <div class="voice-status" id="voiceStatus"></div>
   <div class="ingredients-input">
-    <input type="text" id="ingredientInput" placeholder="הכנס מרכיב (למשל: עוף, עגבניות...)" maxlength="50" />
+    <input type="text" id="ingredientInput" placeholder="הכנס מרכיב או לחץ על המיקרופון" maxlength="50" />
     <button class="btn-add" onclick="addIngredient()">+</button>
+    <button class="btn-mic" id="btnMic" onclick="toggleVoice()" title="דבר בקול">🎤</button>
   </div>
   <div class="tags-container" id="tagsContainer"></div>
   <div class="search-actions">
     <button class="btn-search" onclick="searchRecipes()">חפש מתכונים</button>
     <button class="btn-generate" onclick="generateRecipe()">צור מתכון עם AI</button>
   </div>
-  <p class="hint">ניתן להוסיף עד 5 מרכיבים</p>
+  <p class="hint">ניתן להוסיף עד 5 מרכיבים — או לדבר בקול</p>
   </div>
 </div>
 
@@ -551,6 +623,97 @@
   const activeFilters = new Set();
   let aiRecipeHistory = [];
   let aiRecipeIndex = -1;
+  window._currentRecipe = null;
+
+  // ── VOICE INPUT ──
+  let recognition = null;
+  let isListening = false;
+
+  function toggleVoice() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('הדפדפן שלך לא תומך בזיהוי קול. נסה Chrome.');
+      return;
+    }
+    if (isListening) { recognition.stop(); return; }
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'he-IL';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('btnMic').classList.add('listening');
+      document.getElementById('voiceStatus').textContent = '🎤 מאזין... דבר עכשיו';
+    };
+    recognition.onresult = (e) => {
+      const text = e.results[0][0].transcript.trim();
+      document.getElementById('voiceStatus').textContent = `זוהה: "${text}"`;
+      const parts = text.split(/[,،\s]+/).filter(p => p.length > 1).slice(0, 5 - ingredients.length);
+      parts.forEach(p => {
+        if (!ingredients.includes(p) && ingredients.length < 5) {
+          ingredients.push(p);
+        }
+      });
+      renderTags();
+      setTimeout(() => {
+        document.getElementById('voiceStatus').textContent = '';
+        searchRecipes();
+      }, 600);
+    };
+    recognition.onerror = () => {
+      document.getElementById('voiceStatus').textContent = 'לא הצלחתי לשמוע, נסה שוב';
+      setTimeout(() => document.getElementById('voiceStatus').textContent = '', 2000);
+    };
+    recognition.onend = () => {
+      isListening = false;
+      document.getElementById('btnMic').classList.remove('listening');
+    };
+    recognition.start();
+  }
+
+  // ── TEXT TO SPEECH ──
+  let isSpeaking = false;
+  function toggleSpeak(recipe) {
+    if (!recipe) return;
+    if (isSpeaking) { speechSynthesis.cancel(); return; }
+
+    const text = `${recipe.title}. ${recipe.description || ''}. מרכיבים: ${(recipe.ingredients || []).join(', ')}. הוראות: ${(recipe.instructions || []).join('. ')}`;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'he-IL';
+    utt.rate = 0.95;
+
+    utt.onstart = () => {
+      isSpeaking = true;
+      const btn = document.getElementById('btnSpeak');
+      if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹ עצור קריאה'; }
+    };
+    utt.onend = utt.onerror = () => {
+      isSpeaking = false;
+      const btn = document.getElementById('btnSpeak');
+      if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 קרא את המתכון בקול'; }
+    };
+    speechSynthesis.speak(utt);
+  }
+
+  // ── WHATSAPP SHARE ──
+  function buildWhatsAppLink(recipe) {
+    if (!recipe) return 'https://wa.me/';
+    const lines = [
+      `*${recipe.title}*`,
+      recipe.description || '',
+      '',
+      '*מרכיבים:*',
+      ...(recipe.ingredients || []).map(i => `• ${i}`),
+      '',
+      '*הוראות:*',
+      ...(recipe.instructions || []).map((s, i) => `${i + 1}. ${s}`),
+      recipe.chef_tip ? `\n👨‍🍳 *טיפ השף:* ${recipe.chef_tip}` : '',
+      '\n_נשלח מ-Cookit 🍳_',
+    ].join('\n');
+    return `https://wa.me/?text=${encodeURIComponent(lines)}`;
+  }
 
   function toggleFilter(btn, filter) {
     if (activeFilters.has(filter)) {
@@ -702,6 +865,9 @@
   }
 
   function renderFullRecipe(recipe, sourceUrl, isAiGenerated = false) {
+    window._currentRecipe = recipe;
+    speechSynthesis.cancel();
+    isSpeaking = false;
     const section = document.getElementById('resultsSection');
     const ingredientsList = (recipe.ingredients || []);
 
@@ -752,6 +918,12 @@
           </div>` : ''}
 
         ${sourceUrl ? `<a class="btn-link" href="${sourceUrl}" target="_blank">עבור לאתר המקור</a>` : ''}
+
+        <button class="btn-speak" id="btnSpeak" onclick="toggleSpeak(window._currentRecipe)">🔊 קרא את המתכון בקול</button>
+        <a class="btn-whatsapp" href="${buildWhatsAppLink(recipe)}" target="_blank">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          שלח ל-WhatsApp
+        </a>
 
         ${isAiGenerated ? `
           ${aiRecipeHistory.length > 1 ? `
