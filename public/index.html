@@ -247,6 +247,25 @@
       0%,100% { box-shadow: 0 0 0 0 rgba(229,62,62,0.4); }
       50%      { box-shadow: 0 0 0 8px rgba(229,62,62,0); }
     }
+    .mode-choice-bubble { max-width: 100%; }
+    .btn-mode-choice {
+      flex: 1;
+      background: white;
+      color: #7c3aed;
+      border: 2px solid #c4b5fd;
+      padding: 10px 8px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+      transition: all 0.18s;
+    }
+    .btn-mode-choice:hover { background: #f5f0ff; border-color: #8b5cf6; }
+    .btn-mode-choice.ai { background: linear-gradient(135deg,#8b5cf6,#6d28d9); color: white; border-color: transparent; }
+    .btn-mode-choice.ai:hover { opacity: 0.9; }
+    .btn-mode-choice:disabled { opacity: 0.5; cursor: default; }
+
     .voice-hint { font-size: 12px; color: #e53e3e; text-align: center; padding: 4px 0; flex-shrink: 0; display: none; }
     .voice-hint.visible { display: block; }
   </style>
@@ -336,7 +355,11 @@
 
       history.push({ role: 'user', content: text });
 
-      if (data.type === 'recipes') {
+      if (data.type === 'ask_mode') {
+        appendModeChoice(data.ingredients, data.filters || []);
+        history.push({ role: 'user', content: text });
+        history.push({ role: 'assistant', content: `שאלתי איזה סוג מתכון עם ${data.ingredients.join(', ')}` });
+      } else if (data.type === 'recipes') {
         appendSearchResults(data.recipes, data.ingredients);
         history.push({ role: 'assistant', content: `מצאתי ${data.recipes.length} מתכונים עם ${data.ingredients.join(', ')}` });
       } else if (data.type === 'recipe') {
@@ -458,6 +481,61 @@
       </div>`;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+  }
+
+  function appendModeChoice(ingredients, filters) {
+    const chat = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    const id = 'mode-' + Date.now();
+    const ing = ingredients.join(', ');
+    const filtersJson = encodeURIComponent(JSON.stringify(filters));
+    const ingJson = encodeURIComponent(JSON.stringify(ingredients));
+    div.innerHTML = `<div class="avatar">🍳</div>
+      <div class="bubble mode-choice-bubble">
+        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ing}</strong><br>איזה סוג מתכון תרצה?</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-mode-choice" onclick="chooseMode('search','${encodeURIComponent(ing)}','${filtersJson}','${id}')">
+            🔍 מתכון מהאינטרנט
+          </button>
+          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${encodeURIComponent(ing)}','${filtersJson}','${id}')">
+            ✨ מתכון מקורי AI
+          </button>
+        </div>
+      </div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function chooseMode(mode, encodedIng, filtersJson, bubbleId) {
+    const ing = decodeURIComponent(encodedIng);
+    const filters = JSON.parse(decodeURIComponent(filtersJson));
+    // נטרל את הכפתורים
+    document.querySelectorAll(`#${bubbleId} .btn-mode-choice, .btn-mode-choice`).forEach(b => b.disabled = true);
+
+    const label = mode === 'search' ? '🔍 חיפוש מהאינטרנט' : '✨ יצירה עם AI';
+    appendMsg('user', label);
+    const typingId = appendTyping();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `תמצא מתכון עם ${ing}`, mode, history: history.slice(-8) })
+      });
+      const data = await res.json();
+      removeTyping(typingId);
+      if (data.type === 'recipes') {
+        appendSearchResults(data.recipes, data.ingredients);
+      } else if (data.type === 'recipe') {
+        appendRecipeBubble(data.recipe);
+      } else {
+        appendMsg('bot', data.text || data.error);
+      }
+    } catch {
+      removeTyping(typingId);
+      appendMsg('bot', 'שגיאה, נסה שוב.');
+    }
   }
 
   function toggleSpeak(id) {

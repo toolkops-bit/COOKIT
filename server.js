@@ -419,7 +419,16 @@ query: שאלה חופשית אם chat`,
     } catch { intent = { action: 'chat', ingredients: [], filters: [], query: message }; }
 
     // שלב 2: בצע לפי כוונה
-    if (intent.action === 'search' && intent.ingredients.length > 0) {
+    const forcedMode = req.body.mode; // 'search' | 'generate' — נבחר ע"י המשתמש
+
+    // אם יש מרכיבים ולא נבחר מצב — שאל קודם
+    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length > 0 && !forcedMode) {
+      return res.json({ type: 'ask_mode', ingredients: intent.ingredients, filters: intent.filters });
+    }
+
+    const effectiveAction = forcedMode || intent.action;
+
+    if ((effectiveAction === 'search') && intent.ingredients.length > 0) {
       const filterText = intent.filters.length > 0 ? ` ${intent.filters.join(' ')}` : '';
       const q = `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`;
       const searchRes = await axios.post('https://google.serper.dev/search',
@@ -442,7 +451,7 @@ query: שאלה חופשית אם chat`,
       return res.json({ type: 'recipes', recipes: parsed.recipes || [], ingredients: intent.ingredients });
     }
 
-    if (intent.action === 'generate') {
+    if (effectiveAction === 'generate') {
       const CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני'];
       const METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
       const rand = a => a[Math.floor(Math.random()*a.length)];
