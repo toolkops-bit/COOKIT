@@ -1,0 +1,9 @@
+{
+  "appId": "com.cookit.app",
+  "appName": "Cookit",
+  "webDir": "public",
+  "server": {
+    "url": "https://cookit-production.up.railway.app",
+    "cleartext": false
+  }
+}

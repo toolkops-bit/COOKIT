@@ -8,6 +8,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "axios": "^1.6.0",
     "better-sqlite3": "^12.9.0",
     "cheerio": "^1.2.0",

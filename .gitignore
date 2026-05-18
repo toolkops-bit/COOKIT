@@ -5,3 +5,4 @@ prices.db-shm
 prices.db-wal
 *.txt
 probe-*.js
+android/
