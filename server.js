@@ -391,6 +391,92 @@ app.post('/api/search-more', (req, res) => {
   res.json({ candidates: multi[chain] || [] });
 });
 
+// ── CHAT ENDPOINT ──
+app.post('/api/chat', async (req, res) => {
+  const { message, history = [] } = req.body;
+  if (!message) return res.status(400).json({ error: 'חסרה הודעה' });
+
+  try {
+    // שלב 1: זהה כוונה
+    const intentRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 150,
+      system: `זהה את כוונת המשתמש והחזר JSON בלבד:
+{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":""}
+- search: מחפש מתכונים קיימים מהאינטרנט
+- generate: רוצה מתכון מקורי מ-AI
+- chat: שאלה כללית על בישול / שיחה
+ingredients: מערך של מרכיבים שצוינו
+filters: מערך של סגנון/דיאטה שצוין (טבעוני, מהיר וכו')
+query: שאלה חופשית אם chat`,
+      messages: [{ role: 'user', content: message }]
+    });
+
+    let intent;
+    try {
+      const m = intentRes.content[0].text.match(/\{[\s\S]*\}/);
+      intent = m ? JSON.parse(m[0]) : { action: 'chat', ingredients: [], filters: [], query: message };
+    } catch { intent = { action: 'chat', ingredients: [], filters: [], query: message }; }
+
+    // שלב 2: בצע לפי כוונה
+    if (intent.action === 'search' && intent.ingredients.length > 0) {
+      const filterText = intent.filters.length > 0 ? ` ${intent.filters.join(' ')}` : '';
+      const q = `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`;
+      const searchRes = await axios.post('https://google.serper.dev/search',
+        { q, gl: 'il', hl: 'iw', num: 8 },
+        { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
+      );
+      const results = (searchRes.data.organic || []).slice(0, 6);
+      if (results.length === 0) return res.json({ type: 'text', text: 'לא מצאתי מתכונים מתאימים. נסה מרכיבים אחרים או בקש שאייצר מתכון.' });
+
+      const aiRes = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        system: `אתה עוזר בישול ידידותי. המשתמש חיפש מתכונים עם: ${intent.ingredients.join(', ')}.
+נתח את תוצאות החיפוש והחזר JSON בלבד:
+{"recipes":[{"title":"","description":"עד 15 מילים","dominance":"גבוה|בינוני|נמוך","source":"","url":""}]}`,
+        messages: [{ role: 'user', content: results.map((r,i) => `${i+1}. ${r.title}\n${r.snippet}\n${r.link}`).join('\n\n') }]
+      });
+      const m2 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
+      const parsed = m2 ? JSON.parse(m2[0]) : { recipes: [] };
+      return res.json({ type: 'recipes', recipes: parsed.recipes || [], ingredients: intent.ingredients });
+    }
+
+    if (intent.action === 'generate') {
+      const CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני'];
+      const METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
+      const rand = a => a[Math.floor(Math.random()*a.length)];
+      const filterInst = intent.filters.length > 0 ? ` חייב להיות: ${intent.filters.join(', ')}.` : '';
+      const aiRes = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2500,
+        system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
+{"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":""}`,
+        messages: [{ role: 'user', content: `מרכיבים: ${intent.ingredients.join(', ')}.${filterInst} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
+      });
+      const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
+      const recipe = m3 ? JSON.parse(m3[0]) : null;
+      if (!recipe) return res.json({ type: 'text', text: 'שגיאה ביצירת מתכון, נסה שוב.' });
+      return res.json({ type: 'recipe', recipe });
+    }
+
+    // chat כללי
+    const msgs = history.slice(-6).map(h => ({ role: h.role, content: h.content }));
+    msgs.push({ role: 'user', content: message });
+    const chatRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system: `אתה עוזר בישול ידידותי בעברית. ענה בקצרה ובאופן שימושי. אם מבקשים מתכון — בקש מרכיבים.`,
+      messages: msgs
+    });
+    return res.json({ type: 'text', text: chatRes.content[0].text });
+
+  } catch (err) {
+    console.error('Chat error:', err.message);
+    res.status(500).json({ error: 'שגיאה, נסה שוב' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.get('/health', (req, res) => res.send('ok'));
 app.listen(PORT, '0.0.0.0', () => {

@@ -2,102 +2,218 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>מתכונים לפי מרכיבים</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Cookit 🍳</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&display=swap');
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Heebo', 'Segoe UI', Arial, sans-serif;
-      background: #f2ede8;
+      font-family: 'Heebo', Arial, sans-serif;
+      background: #f0ebe4;
       color: #2d2d2d;
-      min-height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
+
+    /* HEADER */
     header {
       background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
       color: white;
-      padding: 34px 20px 52px;
+      padding: 14px 20px;
       text-align: center;
-      position: relative;
+      flex-shrink: 0;
+      box-shadow: 0 2px 12px rgba(109,40,217,0.3);
     }
-    header::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 30px;
-      background: #f2ede8;
-      clip-path: ellipse(54% 100% at 50% 100%);
-    }
-    header h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.3px; }
-    header p  { font-size: 14px; opacity: 0.82; margin-top: 6px; font-weight: 300; }
+    header h1 { font-size: 22px; font-weight: 800; }
+    header p  { font-size: 12px; opacity: 0.8; margin-top: 2px; }
 
-    .search-section {
-      max-width: 680px;
-      margin: 28px auto 0;
-      padding: 0 16px;
+    /* CHAT AREA */
+    #chatArea {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
-    .search-card {
+
+    /* WELCOME */
+    .welcome {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+    .welcome .icon { font-size: 52px; margin-bottom: 12px; }
+    .welcome h2 { font-size: 18px; color: #666; font-weight: 600; margin-bottom: 8px; }
+    .welcome p  { font-size: 14px; line-height: 1.6; }
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .suggestion-chip {
       background: white;
+      border: 1.5px solid #d8cff0;
+      color: #7c3aed;
+      padding: 8px 14px;
       border-radius: 20px;
-      padding: 22px 20px 18px;
-      box-shadow: 0 4px 22px rgba(0,0,0,0.09);
-    }
-    .ingredients-input {
-      position: relative;
-      margin-bottom: 14px;
-    }
-    .ingredients-input input {
-      width: 100%;
-      padding: 13px 50px 13px 50px;
-      border: 2px solid #e2d9d0;
-      border-radius: 13px;
-      font-size: 16px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      font-size: 13px;
+      cursor: pointer;
       font-family: 'Heebo', sans-serif;
-      background: #faf7f4;
+      transition: all 0.15s;
+    }
+    .suggestion-chip:hover { background: #f5f0ff; border-color: #8b5cf6; }
+
+    /* BUBBLES */
+    .msg { display: flex; align-items: flex-end; gap: 8px; }
+    .msg.user { flex-direction: row-reverse; }
+    .bubble {
+      max-width: 78%;
+      padding: 11px 15px;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.55;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .msg.user .bubble {
+      background: #8b5cf6;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.bot .bubble {
+      background: white;
+      color: #2d2d2d;
+      border-bottom-left-radius: 4px;
+    }
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    /* TYPING */
+    .typing-dots span {
+      display: inline-block;
+      width: 7px; height: 7px;
+      background: #bbb;
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,80%,100% { transform: translateY(0); }
+      40%          { transform: translateY(-7px); }
+    }
+
+    /* RECIPE CARD in bubble */
+    .recipe-bubble { background: white; border-radius: 18px; border-bottom-left-radius: 4px; max-width: 90%; box-shadow: 0 2px 10px rgba(0,0,0,0.09); overflow: hidden; }
+    .recipe-bubble-header { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 14px 16px; }
+    .recipe-bubble-header h3 { font-size: 17px; font-weight: 700; }
+    .recipe-bubble-header p  { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+    .recipe-meta-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px 0; }
+    .meta-chip { background: #f5f0ff; color: #7c3aed; font-size: 12px; padding: 4px 10px; border-radius: 12px; }
+    .recipe-section { padding: 10px 16px; }
+    .recipe-section h4 { font-size: 14px; font-weight: 700; color: #444; margin-bottom: 6px; }
+    .recipe-section ul, .recipe-section ol { padding-right: 18px; font-size: 14px; line-height: 1.7; color: #555; }
+    .chef-tip-box { margin: 8px 16px 12px; background: #fffbeb; border-right: 3px solid #f59e0b; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: #78350f; }
+    .recipe-actions { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #f0e8ff; }
+    .btn-wa {
+      flex: 1;
+      background: #25d366;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-speak-recipe {
+      flex: 1;
+      background: #f5f0ff;
+      color: #7c3aed;
+      border: 1.5px solid #c4b5fd;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+    }
+    .btn-speak-recipe.speaking { background: #8b5cf6; color: white; }
+
+    /* SEARCH RESULTS */
+    .results-bubble { background: white; border-radius: 18px; border-bottom-left-radius: 4px; max-width: 90%; box-shadow: 0 2px 10px rgba(0,0,0,0.09); overflow: hidden; }
+    .results-bubble-header { padding: 12px 16px; background: #f9f6ff; border-bottom: 1px solid #ede8ff; font-size: 14px; font-weight: 700; color: #6d28d9; }
+    .result-item { padding: 12px 16px; border-bottom: 1px solid #f5f0ff; cursor: pointer; transition: background 0.15s; }
+    .result-item:last-child { border-bottom: none; }
+    .result-item:hover { background: #faf7ff; }
+    .result-item h4 { font-size: 14px; font-weight: 700; color: #2d2d2d; margin-bottom: 3px; }
+    .result-item p  { font-size: 12px; color: #888; line-height: 1.4; }
+    .result-item .src { font-size: 11px; color: #c4b5fd; margin-top: 3px; }
+    .dom-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+    .dom-high { background: #d1fae5; color: #065f46; }
+    .dom-mid  { background: #fef3c7; color: #92400e; }
+    .dom-low  { background: #f3f4f6; color: #6b7280; }
+
+    /* INPUT BAR */
+    #inputBar {
+      background: white;
+      padding: 10px 12px;
+      border-top: 1px solid #e8e0f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    #msgInput {
+      flex: 1;
+      border: 2px solid #e2d9f3;
+      border-radius: 24px;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-family: 'Heebo', sans-serif;
+      outline: none;
+      background: #faf7ff;
+      transition: border-color 0.2s;
       color: #2d2d2d;
     }
-    .ingredients-input input:focus {
-      border-color: #8b5cf6;
-      background: white;
-      box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
-    }
-    .btn-add {
-      position: absolute;
-      left: 9px;
-      top: 50%;
-      transform: translateY(-50%);
+    #msgInput:focus { border-color: #8b5cf6; background: white; }
+    .btn-send {
+      width: 44px; height: 44px;
       background: #8b5cf6;
       color: white;
       border: none;
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      font-size: 22px;
+      border-radius: 50%;
+      font-size: 20px;
       cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
       transition: background 0.18s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-shrink: 0;
     }
-    .btn-add:hover { background: #7c3aed; }
+    .btn-send:hover { background: #7c3aed; }
     .btn-mic {
-      position: absolute;
-      right: 9px;
-      top: 50%;
-      transform: translateY(-50%);
+      width: 44px; height: 44px;
       background: white;
       color: #8b5cf6;
-      border: 2px solid #8b5cf6;
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      font-size: 18px;
+      border: 2px solid #c4b5fd;
+      border-radius: 50%;
+      font-size: 20px;
       cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
       transition: all 0.18s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-shrink: 0;
     }
     .btn-mic.listening {
       background: #e53e3e;
@@ -109,1189 +225,264 @@
       0%,100% { box-shadow: 0 0 0 0 rgba(229,62,62,0.4); }
       50%      { box-shadow: 0 0 0 8px rgba(229,62,62,0); }
     }
-    .voice-status {
-      font-size: 13px;
-      color: #8b5cf6;
-      text-align: center;
-      min-height: 18px;
-      margin-bottom: 6px;
-    }
-    .btn-whatsapp {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: #25d366;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 13px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: 'Heebo', sans-serif;
-      text-decoration: none;
-      margin-top: 12px;
-      width: 100%;
-      justify-content: center;
-    }
-    .btn-speak {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #f5f0ff;
-      color: #7c3aed;
-      border: 1.5px solid #8b5cf6;
-      padding: 10px 16px;
-      border-radius: 13px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: 'Heebo', sans-serif;
-      margin-top: 12px;
-      width: 100%;
-      justify-content: center;
-    }
-    .btn-speak.speaking { background: #8b5cf6; color: white; }
-
-    .tags-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-      min-height: 4px;
-    }
-    .tag {
-      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-      color: white;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      box-shadow: 0 2px 6px rgba(139,92,246,0.28);
-    }
-    .tag button {
-      background: rgba(255,255,255,0.22);
-      border: none;
-      color: white;
-      cursor: pointer;
-      font-size: 13px;
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s;
-    }
-    .tag button:hover { background: rgba(255,255,255,0.42); }
-
-    .search-actions { display: flex; gap: 10px; }
-    .btn-search {
-      flex: 1;
-      background: #2d2d2d;
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 13px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
-      font-family: 'Heebo', sans-serif;
-    }
-    .btn-search:hover { background: #444; transform: translateY(-1px); }
-    .btn-generate {
-      flex: 1;
-      background: linear-gradient(135deg, #2196F3, #1565c0);
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 13px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
-      font-family: 'Heebo', sans-serif;
-      box-shadow: 0 3px 10px rgba(33,150,243,0.3);
-    }
-    .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(33,150,243,0.4); }
-
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 18px;
-    }
-    .filter-btn {
-      padding: 7px 14px;
-      border-radius: 20px;
-      border: 1.5px solid #e2d9d0;
-      background: #faf7f4;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.18s;
-      color: #666;
-      font-family: 'Heebo', sans-serif;
-    }
-    .filter-btn:hover  { border-color: #8b5cf6; color: #8b5cf6; background: #fff5f1; }
-    .filter-btn.active { background: #8b5cf6; border-color: #8b5cf6; color: white; }
-
-    .hint { font-size: 12px; color: #bbb; margin-top: 10px; text-align: center; }
-
-    .results-section {
-      max-width: 680px;
-      margin: 20px auto;
-      padding: 0 16px 50px;
-    }
-    .results-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #aaa; }
-
-    .recipe-card {
-      background: white;
-      border-radius: 16px;
-      padding: 18px 20px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-      transition: transform 0.2s, box-shadow 0.2s;
-      border-right: 4px solid #e2d9d0;
-    }
-    .recipe-card.dom-high-card { border-right-color: #43a047; }
-    .recipe-card.dom-mid-card  { border-right-color: #ef6c00; }
-    .recipe-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.10); }
-    .recipe-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-    .recipe-card p  { font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.6; }
-    .recipe-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .dominance-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .dom-high { background: #e8f5e9; color: #2e7d32; }
-    .dom-mid  { background: #fff3e0; color: #e65100; }
-    .dom-low  { background: #f5f5f5; color: #aaa; }
-    .source-label { font-size: 11px; color: #ccc; }
-
-    .card-actions { display: flex; gap: 8px; }
-    .btn-view {
-      flex: 1; background: #8b5cf6; color: white; border: none;
-      padding: 10px; border-radius: 10px; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: background 0.18s; font-family: 'Heebo', sans-serif;
-    }
-    .btn-view:hover { background: #7c3aed; }
-    .btn-link {
-      flex: 1; background: #faf7f4; color: #555;
-      border: 1.5px solid #e2d9d0; padding: 10px; border-radius: 10px;
-      font-size: 14px; cursor: pointer; text-decoration: none;
-      text-align: center; transition: background 0.18s; font-family: 'Heebo', sans-serif;
-    }
-    .btn-link:hover { background: #f0ebe4; }
-
-    .full-recipe {
-      background: white;
-      border-radius: 20px;
-      padding: 26px 22px;
-      box-shadow: 0 4px 22px rgba(0,0,0,0.09);
-    }
-    .full-recipe h2 { font-size: 24px; font-weight: 800; margin-bottom: 14px; color: #1a1a1a; }
-    .full-recipe h4 {
-      font-size: 12px; font-weight: 700; margin-bottom: 10px;
-      color: #aaa; text-transform: uppercase; letter-spacing: 0.8px;
-    }
-    .full-recipe ul, .full-recipe ol { padding-right: 20px; margin-bottom: 20px; }
-    .full-recipe li { margin-bottom: 9px; font-size: 15px; line-height: 1.7; }
-    .recipe-time { font-size: 13px; color: #bbb; margin-bottom: 18px; }
-    .btn-back {
-      background: #faf7f4; border: 1.5px solid #e2d9d0; padding: 8px 16px;
-      border-radius: 10px; cursor: pointer; font-size: 13px;
-      font-family: 'Heebo', sans-serif; color: #777; transition: background 0.18s;
-    }
-    .btn-back:hover { background: #f0ebe4; }
-
-    .recipe-description {
-      font-size: 15px;
-      color: #555;
-      line-height: 1.7;
-      margin-bottom: 18px;
-      padding: 14px 16px;
-      background: #fdf6f2;
-      border-right: 4px solid #8b5cf6;
-      border-radius: 8px;
-    }
-
-    .recipe-meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-      align-items: center;
-    }
-    .meta-item {
-      font-size: 13px;
-      color: #666;
-      background: #f5f5f0;
-      padding: 5px 12px;
-      border-radius: 20px;
-      border: 1px solid #e0e0e0;
-    }
-    .diff-badge {
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: bold;
-    }
-    .diff-easy { background: #e8f5e9; color: #2e7d32; }
-    .diff-medium { background: #fff3e0; color: #e65100; }
-    .diff-hard { background: #fce4ec; color: #c62828; }
-
-    .chef-tip {
-      background: #fffde7;
-      border: 1px solid #ffe082;
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin: 20px 0;
-      font-size: 14px;
-      line-height: 1.6;
-      color: #5d4037;
-    }
-    .chef-tip-label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 5px;
-      font-size: 15px;
-    }
-
-    .btn-try-again {
-      width: 100%;
-      background: linear-gradient(135deg, #2196F3, #1565c0);
-      color: white; border: none; padding: 13px; border-radius: 12px;
-      font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.18s;
-      margin-top: 12px; font-family: 'Heebo', sans-serif;
-      box-shadow: 0 3px 10px rgba(33,150,243,0.25);
-    }
-    .btn-try-again:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(33,150,243,0.35); }
-
-    .ai-nav {
-      display: flex; align-items: center; justify-content: center;
-      gap: 14px; margin-top: 20px; padding: 14px;
-      background: #f0f7ff; border-radius: 12px; border: 1px solid #bbdefb;
-    }
-    .ai-nav-btn {
-      background: #2196F3; color: white; border: none; padding: 9px 20px;
-      border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
-      transition: background 0.18s; min-width: 85px; font-family: 'Heebo', sans-serif;
-    }
-    .ai-nav-btn:hover:not(:disabled) { background: #1976D2; }
-    .ai-nav-btn:disabled { background: #ddd; color: #aaa; cursor: not-allowed; }
-    .ai-nav-counter { font-size: 15px; color: #1565c0; font-weight: 700; min-width: 50px; text-align: center; }
-
-    .ingredient-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 9px 0; border-bottom: 1px solid #f5f0eb;
-    }
-    .ingredient-row input[type="checkbox"] {
-      width: 18px; height: 18px; cursor: pointer; accent-color: #8b5cf6; flex-shrink: 0;
-    }
-    .ingredient-row label { font-size: 15px; cursor: pointer; flex: 1; }
-    .ingredient-row.missing label { color: #e53e3e; font-weight: 600; }
-    .ingredient-row.missing input { accent-color: #e53e3e; }
-    .price-result-card {
-      background: white; border-radius: 12px; padding: 14px 16px;
-      margin-bottom: 10px; border: 1.5px solid #e2d9d0;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .price-result-card .chain-name { font-weight: 700; font-size: 15px; }
-    .price-result-card .chain-price { font-size: 17px; font-weight: 800; color: #2e7d32; }
-    .price-result-card.cheapest { border-color: #43a047; background: #f1f8e9; }
-    .price-result-card.cheapest .chain-name::after { content: ' 🏆'; }
-    .price-item-row { font-size: 13px; color: #666; margin-top: 4px; }
-    .btn-find-prices {
-      background: linear-gradient(135deg, #e53e3e, #c62828); color: white; border: none;
-      padding: 13px 20px; border-radius: 12px; font-size: 15px; font-weight: 700;
-      cursor: pointer; margin-top: 16px; width: 100%;
-      transition: opacity 0.18s; font-family: 'Heebo', sans-serif;
-    }
-    .btn-find-prices:hover { opacity: 0.9; }
-    .btn-find-prices:disabled { opacity: 0.6; cursor: default; }
-
-    .btn-shopping {
-      background: #43a047; color: white; border: none;
-      padding: 13px 20px; border-radius: 12px; font-size: 15px; font-weight: 600;
-      cursor: pointer; margin-top: 16px; width: 100%;
-      transition: background 0.18s; font-family: 'Heebo', sans-serif;
-    }
-    .btn-shopping:hover { background: #388E3C; }
-
-    .shopping-list {
-      background: #faf7f4; border: 1px solid #e2d9d0;
-      border-radius: 14px; padding: 16px; margin-top: 14px;
-    }
-    .shopping-list h4 { margin-bottom: 10px; color: #333; font-size: 14px; text-transform: none; letter-spacing: 0; }
-    .shopping-list ul { padding-right: 20px; }
-    .shopping-list li { margin-bottom: 7px; font-size: 15px; }
-    .btn-copy {
-      background: white; border: 1.5px solid #e2d9d0; padding: 8px 16px;
-      border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px;
-      font-family: 'Heebo', sans-serif; transition: background 0.18s;
-    }
-    .btn-copy:hover { background: #f5f0eb; }
-
-    .loading { text-align: center; padding: 50px 20px; color: #999; font-size: 16px; }
-    .loading-pot {
-      position: relative;
-      width: 180px;
-      height: 170px;
-      margin: 0 auto 22px;
-    }
-    .falling-ingredient {
-      position: absolute;
-      font-size: 26px;
-      top: -8px;
-      opacity: 0;
-      animation: ingredient-fall 2.1s ease-in infinite;
-    }
-    .pot-svg {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 178px;
-      animation: pot-rock 0.7s ease-in-out infinite alternate;
-      filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
-    }
-    @keyframes pot-rock {
-      from { transform: translateX(-50%) rotate(-2deg); }
-      to   { transform: translateX(-50%) rotate(2deg);  }
-    }
-    @keyframes ingredient-fall {
-      0%   { top: -8px;  opacity: 0; transform: rotate(0deg)   scale(1);   }
-      10%  {             opacity: 1;                                        }
-      65%  { top: 60px;  opacity: 1; transform: rotate(240deg) scale(0.8); }
-      82%  { top: 72px;  opacity: 0; transform: rotate(310deg) scale(0.3); }
-      100% { top: 80px;  opacity: 0;                                       }
-    }
-    .spoon-orbit {
-      position: absolute;
-      top: 85px;
-      left: 89px;
-      width: 0;
-      height: 0;
-      animation: orbit 2s linear infinite;
-    }
-    .spoon-fixed {
-      position: absolute;
-      top: -60px;
-      left: -10px;
-      width: 20px;
-      height: 80px;
-      transform-origin: 10px 60px;
-      animation: spoon-tilt 2s linear infinite;
-    }
-    .spoon-svg-el {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 20px;
-      height: 80px;
-    }
-    @keyframes orbit {
-      0%   { transform: translateX(18px)  translateY(0px);  }
-      25%  { transform: translateX(0px)   translateY(5px);  }
-      50%  { transform: translateX(-18px) translateY(0px);  }
-      75%  { transform: translateX(0px)   translateY(-5px); }
-      100% { transform: translateX(18px)  translateY(0px);  }
-    }
-    @keyframes spoon-tilt {
-      0%   { transform: rotate(14deg);  }
-      25%  { transform: rotate(0deg);   }
-      50%  { transform: rotate(-14deg); }
-      75%  { transform: rotate(0deg);   }
-      100% { transform: rotate(14deg);  }
-    }
-    .empty-state { text-align: center; padding: 60px 20px; color: #ccc; }
-    .empty-state p { margin-bottom: 10px; font-size: 16px; }
-
-    .chain-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 8px;
-      margin: 10px 0 16px;
-    }
-    .chain-btn {
-      padding: 10px 8px;
-      border-radius: 12px;
-      border: 2px solid #8b5cf6;
-      background: white;
-      color: #8b5cf6;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: 'Heebo', sans-serif;
-      transition: all 0.18s;
-      text-align: center;
-      line-height: 1.4;
-    }
-    .chain-btn:hover:not(:disabled) { background: #f5f0ff; }
-    .chain-btn.loading { background: #f5f0ff; opacity: 0.7; cursor: wait; }
-    .chain-btn.done-found { border-color: #43a047; background: #f1f8e9; color: #2e7d32; }
-    .chain-btn.done-empty { border-color: #ccc; background: #fafafa; color: #aaa; }
-    .chain-btn.coming-soon { border-color: #e0d6cc; background: #f8f5f0; color: #ccc; cursor: not-allowed; }
-    .chain-result-panel {
-      background: white;
-      border: 1.5px solid #e2d9d0;
-      border-radius: 14px;
-      margin-top: 10px;
-      overflow: hidden;
-    }
-    .chain-result-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background: #faf7f4;
-      border-bottom: 1px solid #ede8e2;
-    }
-    .chain-result-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 9px 16px;
-      border-bottom: 1px solid #f5f0eb;
-      gap: 8px;
-    }
-    .chain-result-row:last-child { border-bottom: none; }
-
-    .candidate-chips {
-      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;
-    }
-    .candidate-chip {
-      padding: 2px 9px; font-size: 11px; border-radius: 20px;
-      border: 1.5px solid #e0d6cc; background: #fdf9f5; cursor: pointer;
-      color: #777; transition: all 0.15s; font-family: 'Heebo', sans-serif;
-      max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .candidate-chip:hover:not(.active) { border-color: #8b5cf6; color: #8b5cf6; background: #f5f0ff; }
-    .candidate-chip.active { background: #8b5cf6; color: white; border-color: #8b5cf6; }
-    .btn-more-cands {
-      padding: 2px 9px; font-size: 11px; border-radius: 20px;
-      border: 1.5px dashed #8b5cf6; background: none; cursor: pointer;
-      color: #8b5cf6; font-family: 'Heebo', sans-serif; transition: all 0.15s; white-space: nowrap;
-    }
-    .btn-more-cands:hover { background: #f5f0ff; }
-    .btn-more-cands:disabled { opacity: 0.45; cursor: default; }
+    .voice-hint { font-size: 12px; color: #e53e3e; text-align: center; padding: 4px 0; flex-shrink: 0; display: none; }
+    .voice-hint.visible { display: block; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>🧑‍🍳 מה נבשל היום?</h1>
-  <p>בחר את המרכיבים בארוחה ונמצא את המתכון בשבילך</p>
+  <h1>🍳 Cookit</h1>
+  <p>עוזר הבישול החכם שלך</p>
 </header>
 
-<div class="search-section">
-  <div class="search-card">
-  <div class="filters">
-    <button class="filter-btn" onclick="toggleFilter(this, 'ארוחה חמה')">🍲 ארוחה חמה</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'מתכון מהיר')">⚡ מתכון מהיר</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'סלט')">🥗 סלטים</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'מאפה')">🥐 מאפים</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'לא מטוגן')">🥦 לא מטוגן</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'ארוחת ערב')">🌙 ארוחת ערב</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'ארוחת בוקר')">🌅 ארוחת בוקר</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'ארוחת צהריים')">☀️ ארוחת צהריים</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'מופחת קלוריות')">🥗 מופחת קלוריות</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'מתוקים')">🍰 מתוקים</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'עתיר חלבונים')">💪 עתיר חלבונים</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'ללא גלוטן')">🌾 ללא גלוטן</button>
-    <button class="filter-btn" onclick="toggleFilter(this, 'טבעוני')">🌱 טבעוני</button>
-  </div>
-  <div class="voice-status" id="voiceStatus"></div>
-  <div class="ingredients-input">
-    <input type="text" id="ingredientInput" placeholder="הכנס מרכיב או לחץ על המיקרופון" maxlength="50" />
-    <button class="btn-add" onclick="addIngredient()">+</button>
-    <button class="btn-mic" id="btnMic" onclick="toggleVoice()" title="דבר בקול">🎤</button>
-  </div>
-  <div class="tags-container" id="tagsContainer"></div>
-  <div class="search-actions">
-    <button class="btn-search" onclick="searchRecipes()">חפש מתכונים</button>
-    <button class="btn-generate" onclick="generateRecipe()">צור מתכון עם AI</button>
-  </div>
-  <p class="hint">ניתן להוסיף עד 5 מרכיבים — או לדבר בקול</p>
+<div id="chatArea">
+  <div class="welcome" id="welcome">
+    <div class="icon">👨‍🍳</div>
+    <h2>שלום! מה נבשל היום?</h2>
+    <p>שאל אותי על מתכונים, מרכיבים, רעיונות לארוחה<br>— כתוב או דבר בקול</p>
+    <div class="suggestions">
+      <div class="suggestion-chip" onclick="sendSuggestion('מה אפשר לבשל עם עוף ואורז?')">🍗 עוף ואורז</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('תיצור מתכון טבעוני מהיר')">🌱 טבעוני מהיר</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('רעיון לארוחת ערב רומנטית')">🕯️ ארוחה רומנטית</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('מתכון עם מה שיש במקרר — ביצים, גבינה, עגבניות')">🥚 ביצים וגבינה</div>
+      <div class="suggestion-chip" onclick="sendSuggestion('עוגה פשוטה לשבת')">🎂 עוגה לשבת</div>
+    </div>
   </div>
 </div>
 
-<div class="results-section" id="resultsSection"></div>
+<div class="voice-hint" id="voiceHint">🎤 מאזין... דבר עכשיו</div>
+
+<div id="inputBar">
+  <button class="btn-mic" id="btnMic" onclick="toggleVoice()">🎤</button>
+  <input type="text" id="msgInput" placeholder="שאל אותי על מתכון..." autocomplete="off" />
+  <button class="btn-send" onclick="sendMessage()">➤</button>
+</div>
 
 <script>
-  const ingredients = [];
-  let lastResults = [];
-  const activeFilters = new Set();
-  let aiRecipeHistory = [];
-  let aiRecipeIndex = -1;
-  window._currentRecipe = null;
-
-  // ── VOICE INPUT ──
+  let history = [];
+  let isSpeaking = false;
   let recognition = null;
   let isListening = false;
 
-  function toggleVoice() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('הדפדפן שלך לא תומך בזיהוי קול. נסה Chrome.');
-      return;
-    }
-    if (isListening) { recognition.stop(); return; }
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SR();
-    recognition.lang = 'he-IL';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      isListening = true;
-      document.getElementById('btnMic').classList.add('listening');
-      document.getElementById('voiceStatus').textContent = '🎤 מאזין... דבר עכשיו';
-    };
-    recognition.onresult = (e) => {
-      const text = e.results[0][0].transcript.trim();
-      document.getElementById('voiceStatus').textContent = `זוהה: "${text}"`;
-      const parts = text.split(/[,،\s]+/).filter(p => p.length > 1).slice(0, 5 - ingredients.length);
-      parts.forEach(p => {
-        if (!ingredients.includes(p) && ingredients.length < 5) {
-          ingredients.push(p);
-        }
-      });
-      renderTags();
-      setTimeout(() => {
-        document.getElementById('voiceStatus').textContent = '';
-        searchRecipes();
-      }, 600);
-    };
-    recognition.onerror = () => {
-      document.getElementById('voiceStatus').textContent = 'לא הצלחתי לשמוע, נסה שוב';
-      setTimeout(() => document.getElementById('voiceStatus').textContent = '', 2000);
-    };
-    recognition.onend = () => {
-      isListening = false;
-      document.getElementById('btnMic').classList.remove('listening');
-    };
-    recognition.start();
-  }
-
-  // ── TEXT TO SPEECH ──
-  let isSpeaking = false;
-  function toggleSpeak(recipe) {
-    if (!recipe) return;
-    if (isSpeaking) { speechSynthesis.cancel(); return; }
-
-    const text = `${recipe.title}. ${recipe.description || ''}. מרכיבים: ${(recipe.ingredients || []).join(', ')}. הוראות: ${(recipe.instructions || []).join('. ')}`;
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'he-IL';
-    utt.rate = 0.95;
-
-    utt.onstart = () => {
-      isSpeaking = true;
-      const btn = document.getElementById('btnSpeak');
-      if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹ עצור קריאה'; }
-    };
-    utt.onend = utt.onerror = () => {
-      isSpeaking = false;
-      const btn = document.getElementById('btnSpeak');
-      if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 קרא את המתכון בקול'; }
-    };
-    speechSynthesis.speak(utt);
-  }
-
-  // ── WHATSAPP SHARE ──
-  function buildWhatsAppLink(recipe) {
-    if (!recipe) return 'https://wa.me/';
-    const lines = [
-      `*${recipe.title}*`,
-      recipe.description || '',
-      '',
-      '*מרכיבים:*',
-      ...(recipe.ingredients || []).map(i => `• ${i}`),
-      '',
-      '*הוראות:*',
-      ...(recipe.instructions || []).map((s, i) => `${i + 1}. ${s}`),
-      recipe.chef_tip ? `\n👨‍🍳 *טיפ השף:* ${recipe.chef_tip}` : '',
-      '\n_נשלח מ-Cookit 🍳_',
-    ].join('\n');
-    return `https://wa.me/?text=${encodeURIComponent(lines)}`;
-  }
-
-  function toggleFilter(btn, filter) {
-    if (activeFilters.has(filter)) {
-      activeFilters.delete(filter);
-      btn.classList.remove('active');
-    } else {
-      activeFilters.add(filter);
-      btn.classList.add('active');
-    }
-  }
-
-  document.getElementById('ingredientInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addIngredient();
+  document.getElementById('msgInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
   });
 
-  function addIngredient() {
-    const input = document.getElementById('ingredientInput');
-    const val = input.value.trim();
-    if (!val || ingredients.length >= 5 || ingredients.includes(val)) {
-      input.value = '';
-      return;
-    }
-    ingredients.push(val);
+  function sendSuggestion(text) {
+    document.getElementById('msgInput').value = text;
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text) return;
     input.value = '';
-    renderTags();
-  }
 
-  function removeIngredient(idx) {
-    ingredients.splice(idx, 1);
-    renderTags();
-  }
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
 
-  function renderTags() {
-    const container = document.getElementById('tagsContainer');
-    container.innerHTML = ingredients.map((ing, i) => `
-      <div class="tag">
-        ${ing}
-        <button onclick="removeIngredient(${i})">×</button>
-      </div>
-    `).join('');
-  }
+    appendMsg('user', text);
+    const typingId = appendTyping();
 
-  function dominanceBadge(d) {
-    if (d === 'גבוה') return '<span class="dominance-badge dom-high">מרכיב ראשי</span>';
-    if (d === 'בינוני') return '<span class="dominance-badge dom-mid">מרכיב משני</span>';
-    return '<span class="dominance-badge dom-low">מרכיב נוסף</span>';
-  }
-
-  async function searchRecipes() {
-    addIngredient();
-    if (ingredients.length === 0) {
-      alert('נא להוסיף לפחות מרכיב אחד');
-      return;
-    }
-    showLoading('מחפש מתכונים...');
     try {
-      const res = await fetch('/api/search', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients, filter: [...activeFilters] })
+        body: JSON.stringify({ message: text, history: history.slice(-8) })
       });
       const data = await res.json();
-      if (data.error) { showError(data.error); return; }
-      lastResults = data.recipes || [];
-      renderRecipeList(lastResults);
+      removeTyping(typingId);
+
+      if (data.error) { appendMsg('bot', data.error); return; }
+
+      history.push({ role: 'user', content: text });
+
+      if (data.type === 'recipes') {
+        appendSearchResults(data.recipes, data.ingredients);
+        history.push({ role: 'assistant', content: `מצאתי ${data.recipes.length} מתכונים עם ${data.ingredients.join(', ')}` });
+      } else if (data.type === 'recipe') {
+        appendRecipeBubble(data.recipe);
+        history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
+      } else {
+        appendMsg('bot', data.text);
+        history.push({ role: 'assistant', content: data.text });
+      }
     } catch {
-      showError('שגיאה בחיפוש, נסה שוב');
+      removeTyping(typingId);
+      appendMsg('bot', 'שגיאה בחיבור לשרת, נסה שוב.');
     }
   }
 
-  async function generateRecipe() {
-    addIngredient();
-    if (ingredients.length === 0) {
-      alert('נא להוסיף לפחות מרכיב אחד');
-      return;
-    }
-    showLoading('AI יוצר מתכון...');
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients, filter: [...activeFilters] })
-      });
-      const data = await res.json();
-      if (data.error) { showError(data.error); return; }
-      aiRecipeHistory.push(data);
-      aiRecipeIndex = aiRecipeHistory.length - 1;
-      renderFullRecipe(data, null, true);
-    } catch {
-      showError('שגיאה ביצירת מתכון, נסה שוב');
-    }
+  function appendMsg(role, text) {
+    const chat = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    if (role === 'bot') div.innerHTML = `<div class="avatar">🍳</div><div class="bubble">${text}</div>`;
+    else                div.innerHTML = `<div class="bubble">${text}</div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
   }
 
-  function navigateAiRecipe(dir) {
-    aiRecipeIndex += dir;
-    renderFullRecipe(aiRecipeHistory[aiRecipeIndex], null, true);
+  function appendTyping() {
+    const chat = document.getElementById('chatArea');
+    const id = 'typing-' + Date.now();
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.id = id;
+    div.innerHTML = `<div class="avatar">🍳</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return id;
+  }
+  function removeTyping(id) { document.getElementById(id)?.remove(); }
+
+  function appendSearchResults(recipes, ingredients) {
+    const chat = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+
+    const items = recipes.map(r => {
+      const dom = r.dominance === 'גבוה' ? `<span class="dom-badge dom-high">מרכיב ראשי</span>` :
+                  r.dominance === 'בינוני' ? `<span class="dom-badge dom-mid">מרכיב בינוני</span>` : '';
+      return `<div class="result-item" onclick="loadRecipe('${encodeURIComponent(r.url)}','${r.title.replace(/'/g,"\\'")}')">
+        <h4>${r.title}${dom}</h4>
+        <p>${r.description || ''}</p>
+        <div class="src">${r.source || ''}</div>
+      </div>`;
+    }).join('');
+
+    div.innerHTML = `<div class="avatar">🍳</div>
+      <div class="results-bubble">
+        <div class="results-bubble-header">מצאתי ${recipes.length} מתכונים עם ${ingredients.join(', ')} 🔍</div>
+        ${items}
+      </div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
   }
 
-  async function viewRecipe(url, title) {
-    showLoading('טוען מתכון...');
+  async function loadRecipe(encodedUrl, title) {
+    const url = decodeURIComponent(encodedUrl);
+    const typingId = appendTyping();
     try {
       const res = await fetch('/api/recipe-details', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, title })
       });
-      const data = await res.json();
-      if (data.error) { showError(data.error); return; }
-      renderFullRecipe(data, url);
+      const recipe = await res.json();
+      removeTyping(typingId);
+      if (recipe.error) { appendMsg('bot', recipe.error); return; }
+      appendRecipeBubble(recipe);
     } catch {
-      showError('שגיאה בטעינת המתכון');
+      removeTyping(typingId);
+      appendMsg('bot', 'לא הצלחתי לטעון את המתכון.');
     }
   }
 
-  function renderRecipeList(recipes) {
-    const section = document.getElementById('resultsSection');
-    if (recipes.length === 0) {
-      section.innerHTML = `
-        <div class="empty-state">
-          <p>לא נמצאו מתכונים מתאימים</p>
-          <p>נסה ללחוץ "צור מתכון עם AI"</p>
-        </div>`;
+  function appendRecipeBubble(recipe) {
+    const chat = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    const id = 'recipe-' + Date.now();
+
+    const metaChips = [
+      recipe.difficulty ? `<span class="meta-chip">${recipe.difficulty}</span>` : '',
+      recipe.servings   ? `<span class="meta-chip">👤 ${recipe.servings}</span>` : '',
+      recipe.total_time ? `<span class="meta-chip">⏱ ${recipe.total_time}</span>` : '',
+    ].join('');
+
+    div.innerHTML = `<div class="avatar">🍳</div>
+      <div class="recipe-bubble" id="${id}">
+        <div class="recipe-bubble-header">
+          <h3>${recipe.title}</h3>
+          ${recipe.description ? `<p>${recipe.description}</p>` : ''}
+        </div>
+        ${metaChips ? `<div class="recipe-meta-row">${metaChips}</div>` : ''}
+        <div class="recipe-section">
+          <h4>מרכיבים:</h4>
+          <ul>${(recipe.ingredients||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
+        </div>
+        <div class="recipe-section">
+          <h4>הוראות:</h4>
+          <ol>${(recipe.instructions||[]).map(s=>`<li>${s}</li>`).join('')}</ol>
+        </div>
+        ${recipe.chef_tip ? `<div class="chef-tip-box">👨‍🍳 <strong>טיפ השף:</strong> ${recipe.chef_tip}</div>` : ''}
+        <div class="recipe-actions">
+          <button class="btn-speak-recipe" id="speak-${id}" onclick="toggleSpeak(${JSON.stringify(recipe).replace(/"/g,'&quot;')}, 'speak-${id}')">🔊 קרא בקול</button>
+          <button class="btn-wa" onclick="shareWhatsApp(${JSON.stringify(recipe).replace(/"/g,'&quot;')})">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            שלח ל-WhatsApp
+          </button>
+        </div>
+      </div>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function toggleSpeak(recipe, btnId) {
+    if (isSpeaking) { speechSynthesis.cancel(); return; }
+    const text = `${recipe.title}. ${recipe.description||''}. מרכיבים: ${(recipe.ingredients||[]).join(', ')}. הוראות הכנה: ${(recipe.instructions||[]).join('. ')}`;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'he-IL';
+    utt.rate = 0.92;
+    const btn = document.getElementById(btnId);
+    utt.onstart = () => { isSpeaking = true; if(btn){btn.classList.add('speaking');btn.textContent='⏹ עצור';} };
+    utt.onend = utt.onerror = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent='🔊 קרא בקול';} };
+    speechSynthesis.speak(utt);
+  }
+
+  function shareWhatsApp(recipe) {
+    const lines = [
+      `*${recipe.title}*`,
+      recipe.description||'',
+      '',
+      '*מרכיבים:*',
+      ...(recipe.ingredients||[]).map(i=>`• ${i}`),
+      '',
+      '*הוראות:*',
+      ...(recipe.instructions||[]).map((s,i)=>`${i+1}. ${s}`),
+      recipe.chef_tip ? `\n👨‍🍳 *טיפ השף:* ${recipe.chef_tip}` : '',
+      '\n_נשלח מ-Cookit 🍳_',
+    ].join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, '_blank');
+  }
+
+  // ── VOICE INPUT ──
+  function toggleVoice() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      appendMsg('bot', 'הדפדפן לא תומך בזיהוי קול. נסה Chrome.');
       return;
     }
-    section.innerHTML = `
-      <p class="results-title">נמצאו ${recipes.length} מתכונים</p>
-      ${recipes.map(r => `
-        <div class="recipe-card ${r.dominance === 'גבוה' ? 'dom-high-card' : r.dominance === 'בינוני' ? 'dom-mid-card' : ''}">
-          <h3>${r.title}</h3>
-          <div class="recipe-meta">
-            ${dominanceBadge(r.dominance)}
-            <span class="source-label">${r.source || ''}</span>
-          </div>
-          <p>${r.description || ''}</p>
-          <div class="card-actions">
-            <button class="btn-view" onclick="viewRecipe('${r.url}', '${r.title.replace(/'/g, "\\'")}')">צפה במתכון המלא</button>
-            <a class="btn-link" href="${r.url}" target="_blank">עבור לאתר המקור</a>
-          </div>
-        </div>
-      `).join('')}
-    `;
-  }
-
-  function difficultyBadge(diff) {
-    if (!diff) return '';
-    if (diff.includes('קל')) return `<span class="diff-badge diff-easy">⭐ קל</span>`;
-    if (diff.includes('מאתגר')) return `<span class="diff-badge diff-hard">🔥 מאתגר</span>`;
-    return `<span class="diff-badge diff-medium">⚡ בינוני</span>`;
-  }
-
-  function renderFullRecipe(recipe, sourceUrl, isAiGenerated = false) {
-    window._currentRecipe = recipe;
-    speechSynthesis.cancel();
-    isSpeaking = false;
-    const section = document.getElementById('resultsSection');
-    const ingredientsList = (recipe.ingredients || []);
-
-    const hasTimes = recipe.prep_time || recipe.cook_time || recipe.total_time;
-    const timeHtml = hasTimes
-      ? `${recipe.prep_time ? `<span class="meta-item">⚙️ הכנה: ${recipe.prep_time}</span>` : ''}
-         ${recipe.cook_time ? `<span class="meta-item">🔥 בישול: ${recipe.cook_time}</span>` : ''}
-         ${recipe.total_time ? `<span class="meta-item">⏱ סה"כ: ${recipe.total_time}</span>` : ''}`
-      : recipe.time ? `<span class="meta-item">⏱ זמן: ${recipe.time}</span>` : '';
-
-    section.innerHTML = `
-      <div class="full-recipe">
-        <button class="btn-back" onclick="renderRecipeList(lastResults)">← חזור לתוצאות</button>
-        <br><br>
-        <h2>${recipe.title}</h2>
-
-        ${recipe.description ? `<p class="recipe-description">${recipe.description}</p>` : ''}
-
-        <div class="recipe-meta-row">
-          ${difficultyBadge(recipe.difficulty)}
-          ${recipe.servings ? `<span class="meta-item">👤 ${recipe.servings}</span>` : ''}
-          ${timeHtml}
-        </div>
-
-        <h4 style="display:flex;align-items:center;gap:10px">
-          מרכיבים — <span style="color:#e53e3e;font-weight:700">סמן מה חסר לך ואמצא את הסל הזול ביותר</span>
-          <button onclick="selectAllIngredients()" style="font-size:12px;padding:3px 10px;background:#f0f0f0;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-weight:600;color:#555">בחר הכל</button>
-        </h4>
-        <div id="ingredientsList">
-          ${ingredientsList.map((ing, i) => `
-            <div class="ingredient-row" id="row-${i}">
-              <input type="checkbox" id="ing-${i}" onchange="toggleIngredient(${i})">
-              <label for="ing-${i}">${ing}</label>
-            </div>
-          `).join('')}
-        </div>
-        <button class="btn-find-prices" id="btnFindPrices" onclick="findCheapestCart()">🛒 מצא את הסל הזול ביותר</button>
-        <div id="shoppingListContainer"></div>
-
-        <br>
-        <h4>הוראות הכנה:</h4>
-        <ol>${(recipe.instructions || []).map(s => `<li>${s}</li>`).join('')}</ol>
-
-        ${recipe.chef_tip ? `
-          <div class="chef-tip">
-            <span class="chef-tip-label">👨‍🍳 טיפ השף:</span>
-            ${recipe.chef_tip}
-          </div>` : ''}
-
-        ${sourceUrl ? `<a class="btn-link" href="${sourceUrl}" target="_blank">עבור לאתר המקור</a>` : ''}
-
-        <button class="btn-speak" id="btnSpeak" onclick="toggleSpeak(window._currentRecipe)">🔊 קרא את המתכון בקול</button>
-        <a class="btn-whatsapp" href="${buildWhatsAppLink(recipe)}" target="_blank">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          שלח ל-WhatsApp
-        </a>
-
-        ${isAiGenerated ? `
-          ${aiRecipeHistory.length > 1 ? `
-            <div class="ai-nav">
-              <button class="ai-nav-btn" onclick="navigateAiRecipe(-1)" ${aiRecipeIndex === 0 ? 'disabled' : ''}>→ הקודם</button>
-              <span class="ai-nav-counter">${aiRecipeIndex + 1} / ${aiRecipeHistory.length}</span>
-              <button class="ai-nav-btn" onclick="navigateAiRecipe(1)" ${aiRecipeIndex === aiRecipeHistory.length - 1 ? 'disabled' : ''}>← הבא</button>
-            </div>` : ''}
-          <button class="btn-try-again" onclick="generateRecipe()">🔄 צור מתכון חדש</button>` : ''}
-      </div>
-    `;
-    window._recipeIngredients = ingredientsList;
-  }
-
-  function toggleIngredient(i) {
-    const row = document.getElementById(`row-${i}`);
-    const cb = document.getElementById(`ing-${i}`);
-    if (cb.checked) row.classList.add('missing');
-    else row.classList.remove('missing');
-    const missingCount = (window._recipeIngredients || []).filter((_, j) => document.getElementById(`ing-${j}`)?.checked).length;
-    const btn = document.getElementById('btnFindPrices');
-    if (btn) btn.textContent = missingCount > 0 ? `🛒 מצא סל זול ל-${missingCount} פריטים` : '🛒 מצא את הסל הזול ביותר';
-  }
-
-  function selectAllIngredients() {
-    const total = (window._recipeIngredients || []).length;
-    const checked = (window._recipeIngredients || []).filter((_, i) => document.getElementById(`ing-${i}`)?.checked).length;
-    const selectAll = checked < total;
-    (window._recipeIngredients || []).forEach((_, i) => {
-      const cb = document.getElementById(`ing-${i}`);
-      const row = document.getElementById(`row-${i}`);
-      if (!cb) return;
-      cb.checked = selectAll;
-      if (selectAll) row.classList.add('missing');
-      else row.classList.remove('missing');
-    });
-    const btn = document.getElementById('btnFindPrices');
-    if (btn) btn.textContent = selectAll && total > 0 ? `🛒 מצא סל זול ל-${total} פריטים` : '🛒 מצא את הסל הזול ביותר';
-  }
-
-  function stripQuantity(ing) {
-    const units = ['כוסות','כוס','כפות','כף','כפיות','כפית','גרם',"ק\"ג",'קילו','מ"ל','מיליליטר','ליטר','יחידות','יחידה','קורט','צביטה','חצי','רבע','שליש'];
-    let result = ing.trim().replace(/^[\d\/\.\,½¼¾⅓⅔\s]+/, '').trim();
-    const pattern = new RegExp(`^(${units.join('|')})\\s+`, '');
-    result = result.replace(pattern, '').trim();
-    return result || ing;
-  }
-
-  const ALL_CHAINS = [
-    { id: 'shufersal',     label: 'שופרסל',            active: true  },
-    { id: 'rami-levy',     label: 'רמי לוי',            active: true  },
-    { id: 'victory',       label: 'ויקטורי',            active: true  },
-    { id: 'hazi-hinam',    label: 'חצי חינם',           active: true  },
-    { id: 'tivtaam',       label: 'טיב טעם',            active: true  },
-    { id: 'keshet-teamim', label: 'קשת טעמים',          active: true  },
-    { id: 'freshmarket',   label: 'פרש מרקט',           active: true  },
-    { id: 'carrefour',     label: 'קרפור / יינות ביתן', active: false },
-    { id: 'yochananof',    label: 'יוחננוף',             active: false },
-    { id: 'machsanei',     label: 'מחסני השוק',          active: false },
-  ];
-
-  function buildChainButtonsHtml(itemCount) {
-    let html = `<div style="font-size:13px;color:#666;margin-bottom:10px">לחץ על רשת לבדיקת מחירים ל-${itemCount} מוצרים:</div>
-      <div class="chain-grid">`;
-    for (const c of ALL_CHAINS) {
-      if (c.active) {
-        html += `<button id="chain-btn-${c.id}" class="chain-btn" onclick="scrapeChain('${c.id}','${c.label}')">${c.label}</button>`;
-      } else {
-        html += `<button class="chain-btn coming-soon" disabled>${c.label}<br><span style="font-size:11px">בקרוב</span></button>`;
-      }
-    }
-    html += `</div>`;
-    return html;
-  }
-
-  function appendChainResults(chain, label, results, isGov) {
-    const area = document.getElementById('priceResultsArea');
-    if (!area) return;
-
-    const found = results.filter(r => r.candidates && r.candidates.length > 0);
-    const total = found.reduce((s, r) => s + r.candidates[0].price, 0);
-
-    const rows = results.map((r, i) => {
-      const cands = r.candidates || [];
-      if (cands.length === 0) {
-        return `<div class="chain-result-row">
-          <div style="font-size:13px;color:#bbb;flex:1">${r.query}</div>
-          <div style="font-size:12px;color:#ccc">לא נמצא</div>
-        </div>`;
-      }
-      const sel = cands[0];
-      const chipsHtml = cands.map((c, j) => {
-        const short = c.product_name.length > 24 ? c.product_name.substring(0, 22) + '…' : c.product_name;
-        return `<span class="candidate-chip ${j === 0 ? 'active' : ''}"
-          onclick="selectCandidate('${chain}',${i},${j})"
-          title="${c.product_name.replace(/'/g,"&#39;")}">${short}</span>`;
-      }).join('');
-      const moreBtn = isGov
-        ? `<button class="btn-more-cands" id="more-${chain}-${i}"
-             onclick="loadMoreCandidates('${chain}','${r.query.replace(/'/g,"\\'")}',${i})">+ עוד</button>`
-        : '';
-      return `<div class="chain-result-row" id="crow-${chain}-${i}">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:600">${r.query}</div>
-          <div class="candidate-chips" id="chips-${chain}-${i}">${chipsHtml}${moreBtn}</div>
-        </div>
-        <div style="font-size:15px;font-weight:700;color:#2e7d32;white-space:nowrap"
-             id="cprice-${chain}-${i}">₪${sel.price.toFixed(2)}</div>
-      </div>`;
-    }).join('');
-
-    area.insertAdjacentHTML('beforeend', `
-      <div class="chain-result-panel" id="chain-results-${chain}">
-        <div class="chain-result-header">
-          <div style="font-weight:700;font-size:16px">${label}</div>
-          <div style="font-size:16px;font-weight:800;color:#2e7d32" id="ctotal-${chain}">
-            ${found.length > 0 ? `₪${total.toFixed(2)}` : `<span style="font-size:13px;color:#bbb">לא נמצאו מחירים</span>`}
-          </div>
-        </div>
-        ${rows}
-      </div>`);
-    updateCheapestBanner();
-  }
-
-  function selectCandidate(chain, rowIdx, candIdx) {
-    const results = window._chainResults[chain];
-    if (!results || !results[rowIdx]) return;
-    const row = results[rowIdx];
-    row.selectedIdx = candIdx;
-    const sel = row.candidates[candIdx];
-
-    // עדכן מחיר שורה
-    const priceEl = document.getElementById(`cprice-${chain}-${rowIdx}`);
-    if (priceEl) priceEl.textContent = `₪${sel.price.toFixed(2)}`;
-
-    // עדכן עיצוב chips
-    const chipsEl = document.getElementById(`chips-${chain}-${rowIdx}`);
-    if (chipsEl) {
-      chipsEl.querySelectorAll('.candidate-chip').forEach((chip, j) =>
-        chip.classList.toggle('active', j === candIdx));
-    }
-
-    // חשב total מחדש
-    const total = results.reduce((s, r) => {
-      const idx = r.selectedIdx ?? 0;
-      return s + (r.candidates && r.candidates[idx] ? r.candidates[idx].price : 0);
-    }, 0);
-    const totalEl = document.getElementById(`ctotal-${chain}`);
-    if (totalEl) {
-      const foundCount = results.filter(r => r.candidates && r.candidates.length > 0).length;
-      totalEl.innerHTML = foundCount > 0 ? `₪${total.toFixed(2)}` : '<span style="font-size:13px;color:#bbb">לא נמצאו מחירים</span>';
-    }
-    updateCheapestBanner();
-  }
-
-  async function loadMoreCandidates(chain, query, rowIdx) {
-    const btn = document.getElementById(`more-${chain}-${rowIdx}`);
-    if (!btn || btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = '...';
-
-    const results = window._chainResults[chain];
-    const row = results && results[rowIdx];
-    if (!row) return;
-    const skip = row.candidates ? row.candidates.length : 0;
-
-    try {
-      const res = await fetch('/api/search-more', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chain, query, skip })
-      });
-      const data = await res.json();
-      const newCands = data.candidates || [];
-
-      if (newCands.length === 0) {
-        btn.textContent = 'אין עוד';
-        return;
-      }
-
-      const startIdx = row.candidates.length;
-      row.candidates.push(...newCands);
-
-      const chipsEl = document.getElementById(`chips-${chain}-${rowIdx}`);
-      if (chipsEl) {
-        const newChipsHtml = newCands.map((c, j) => {
-          const short = c.product_name.length > 24 ? c.product_name.substring(0, 22) + '…' : c.product_name;
-          return `<span class="candidate-chip"
-            onclick="selectCandidate('${chain}',${rowIdx},${startIdx + j})"
-            title="${c.product_name.replace(/'/g,"&#39;")}">${short}</span>`;
-        }).join('');
-        btn.insertAdjacentHTML('beforebegin', newChipsHtml);
-      }
-
-      if (newCands.length < 3) {
-        btn.remove();
-      } else {
-        btn.disabled = false;
-        btn.textContent = '+ עוד';
-      }
-    } catch {
-      btn.disabled = false;
-      btn.textContent = '+ עוד';
-    }
-  }
-
-  function updateCheapestBanner() {
-    const totalItems = (window._knownQueries || []).length;
-    if (!window._chainResults || Object.keys(window._chainResults).length < 2) return;
-    const chainTotals = {};
-    for (const [chain, results] of Object.entries(window._chainResults)) {
-      const found = results.filter(r => r.candidates && r.candidates.length > 0);
-      if (found.length >= Math.ceil(totalItems / 2)) {
-        const total = found.reduce((s, r) => {
-          const idx = r.selectedIdx ?? 0;
-          return s + r.candidates[idx].price;
-        }, 0);
-        chainTotals[chain] = { total, count: found.length };
-      }
-    }
-    const sorted = Object.entries(chainTotals).sort((a, b) => a[1].total - b[1].total);
-    if (sorted.length < 2) return;
-    const [cheapestId, cheapestData] = sorted[0];
-    const chainLabel = ALL_CHAINS.find(c => c.id === cheapestId)?.label || cheapestId;
-    const area = document.getElementById('priceResultsArea');
-    if (!area) return;
-    const bannerHtml = `<div id="cheapest-banner" style="background:#e8f5e9;border:2px solid #43a047;border-radius:12px;padding:14px;margin-top:12px;text-align:center">
-      <div style="font-size:16px;font-weight:800;color:#2e7d32">🏆 הסל הזול ביותר עד כה</div>
-      <div style="font-size:22px;font-weight:800;color:#1b5e20;margin-top:4px">${chainLabel}</div>
-      <div style="font-size:15px;color:#388e3c;margin-top:2px">₪${cheapestData.total.toFixed(2)} ל-${cheapestData.count} מוצרים</div>
-    </div>`;
-    const existing = document.getElementById('cheapest-banner');
-    if (existing) existing.outerHTML = bannerHtml;
-    else area.insertAdjacentHTML('beforeend', bannerHtml);
-  }
-
-  async function findCheapestCart() {
-    const ingredients = window._recipeIngredients || [];
-    const missingItems = ingredients.filter((_, i) => document.getElementById(`ing-${i}`)?.checked);
-    const container = document.getElementById('shoppingListContainer');
-
-    if (missingItems.length === 0) {
-      container.innerHTML = `<div class="shopping-list"><h4>✅ לא סימנת פריטים חסרים</h4></div>`;
-      return;
-    }
-
-    const btn = document.getElementById('btnFindPrices');
-    btn.disabled = true;
-    btn.textContent = '⏳ מזהה מוצרים...';
-    container.innerHTML = `<div class="shopping-list"><h4>🔍 מזהה מוצרים לחיפוש...</h4></div>`;
-
-    const names = missingItems.map(stripQuantity);
-    const recipeTitle = document.querySelector('h2')?.textContent || '';
-    const recipeContext = recipeTitle.substring(0, 200);
-
-    try {
-      const res = await fetch('/api/identify-queries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: names, recipeContext })
-      });
-      const data = await res.json();
-
-      window._knownQueries = data.queries;
-      window._chainResults = {};
-
-      const queryListHtml = data.queries.map(q =>
-        `<div style="font-size:13px;padding:3px 0;color:#666">${q.ingredient} <span style="color:#ccc">→</span> <strong style="color:#333">${q.query}</strong></div>`
-      ).join('');
-
-      container.innerHTML = `
-        <div class="shopping-list">
-          <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #ede8e2">
-            <div style="font-size:12px;color:#aaa;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">מוצרים לחיפוש</div>
-            ${queryListHtml}
-          </div>
-          ${buildChainButtonsHtml(data.queries.length)}
-          <div id="priceResultsArea"></div>
-        </div>`;
-
-    } catch {
-      container.innerHTML = `<div class="shopping-list"><h4>שגיאה בזיהוי מוצרים — נסה שוב</h4></div>`;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = `🛒 מצא סל זול ל-${missingItems.length} פריטים`;
-    }
-  }
-
-  async function scrapeChain(chain, label) {
-    const btn = document.getElementById(`chain-btn-${chain}`);
-    if (!btn || btn.disabled) return;
-    btn.disabled = true;
-    btn.className = 'chain-btn loading';
-    btn.textContent = `⏳ ${label}...`;
-
-    try {
-      const queries = window._knownQueries || [];
-      const res = await fetch('/api/scrape-chain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chain, queries })
-      });
-      const result = await res.json();
-
-      if (!window._chainResults) window._chainResults = {};
-      window._chainResults[chain] = result.results;
-
-      const found = result.results.filter(r => r.candidates && r.candidates.length > 0).length;
-      appendChainResults(chain, label, result.results, result.isGov);
-
-      btn.textContent = found > 0 ? `✓ ${label} (${found})` : `✗ ${label}`;
-      btn.className = `chain-btn ${found > 0 ? 'done-found' : 'done-empty'}`;
-    } catch {
-      btn.textContent = `✗ שגיאה`;
-      btn.className = 'chain-btn done-empty';
-    }
-  }
-
-  function copyList() {
-    const text = (window._shoppingList || []).join('\n');
-    navigator.clipboard.writeText(text).then(() => alert('הרשימה הועתקה!'));
-  }
-
-  function showLoading(msg) {
-    document.getElementById('resultsSection').innerHTML = `
-      <div class="loading">
-        <div class="loading-pot">
-          <span class="falling-ingredient" style="left:16%;animation-delay:0s">🥕</span>
-          <span class="falling-ingredient" style="left:34%;animation-delay:0.35s">🧅</span>
-          <span class="falling-ingredient" style="left:53%;animation-delay:0.7s">🍅</span>
-          <span class="falling-ingredient" style="left:68%;animation-delay:1.05s">🧄</span>
-          <span class="falling-ingredient" style="left:26%;animation-delay:1.4s">🥩</span>
-          <span class="falling-ingredient" style="left:60%;animation-delay:1.75s">🌿</span>
-          <div class="spoon-orbit">
-            <div class="spoon-fixed">
-              <svg class="spoon-svg-el" viewBox="0 0 20 80" xmlns="http://www.w3.org/2000/svg">
-                <!-- ידית — y=0..48 -->
-                <rect x="6" y="1" width="8" height="48" rx="4" fill="#9B6B1A"/>
-                <line x1="10" y1="5" x2="10" y2="44" stroke="#7A5210" stroke-width="1.4" opacity="0.4"/>
-                <line x1="12.5" y1="7" x2="12.5" y2="40" stroke="#C49A3A" stroke-width="1" opacity="0.2"/>
-                <!-- צוואר — y=48..56 -->
-                <rect x="8" y="49" width="4" height="7" fill="#8A5C15"/>
-                <!-- קערה — y=56..80 (בתוך הסיר) -->
-                <ellipse cx="10" cy="69" rx="8" ry="9.5" fill="#6B3A0F"/>
-                <ellipse cx="10" cy="69" rx="6" ry="7.5" fill="#9B5520"/>
-                <ellipse cx="7.5" cy="65" rx="2.5" ry="3" fill="rgba(255,255,255,0.18)"/>
-              </svg>
-            </div>
-          </div>
-          <svg class="pot-svg" viewBox="0 0 130 90" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2 26 Q2 20 8 20 L18 20 L18 46 L8 46 Q2 46 2 40 Z" fill="#3a3a3a"/>
-            <path d="M5 24 Q5 22 9 22 L16 22 L16 44 L9 44 Q5 44 5 40 Z" fill="#555"/>
-            <path d="M128 26 Q128 20 122 20 L112 20 L112 46 L122 46 Q128 46 128 40 Z" fill="#3a3a3a"/>
-            <path d="M125 24 Q125 22 121 22 L114 22 L114 44 L121 44 Q125 44 125 40 Z" fill="#555"/>
-            <path d="M18 20 L112 20 L107 84 Q65 90 23 84 Z" fill="#424242"/>
-            <rect x="13" y="12" width="104" height="13" rx="6.5" fill="#2e2e2e"/>
-            <rect x="13" y="12" width="104" height="5" rx="2.5" fill="#606060"/>
-            <ellipse cx="40" cy="53" rx="7" ry="19" fill="rgba(255,255,255,0.07)" transform="rotate(-10 40 53)"/>
-            <ellipse cx="65" cy="80" rx="30" ry="4" fill="#1a1a1a" opacity="0.45"/>
-          </svg>
-        </div>
-        ${msg}
-      </div>`;
-  }
-
-  function showError(msg) {
-    document.getElementById('resultsSection').innerHTML = `
-      <div class="empty-state"><p>❌ ${msg}</p></div>`;
+    if (isListening) { recognition.stop(); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'he-IL';
+    recognition.interimResults = false;
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('btnMic').classList.add('listening');
+      const hint = document.getElementById('voiceHint');
+      hint.textContent = '🎤 מאזין... דבר עכשיו';
+      hint.classList.add('visible');
+    };
+    recognition.onresult = (e) => {
+      const text = e.results[0][0].transcript.trim();
+      document.getElementById('msgInput').value = text;
+      document.getElementById('voiceHint').classList.remove('visible');
+      sendMessage();
+    };
+    recognition.onerror = () => {
+      document.getElementById('voiceHint').textContent = 'לא הצלחתי לשמוע, נסה שוב';
+      setTimeout(() => document.getElementById('voiceHint').classList.remove('visible'), 2000);
+    };
+    recognition.onend = () => {
+      isListening = false;
+      document.getElementById('btnMic').classList.remove('listening');
+    };
+    recognition.start();
   }
 </script>
 </body>
