@@ -600,8 +600,18 @@
         hint.textContent = '🎤 מאזין... דבר עכשיו';
         hint.classList.add('visible');
 
-        const result = await SR.start({ language: 'he-IL', maxResults: 1, popup: false, partialResults: false });
-        const text = result.matches && result.matches[0];
+        let lastMatch = '';
+        const partialListener = await SR.addListener('partialResults', (data) => {
+          if (data.matches && data.matches.length > 0) {
+            lastMatch = data.matches[0];
+            hint.textContent = '🎤 ' + lastMatch;
+          }
+        });
+
+        const result = await SR.start({ language: 'he-IL', maxResults: 1, popup: false, partialResults: true });
+        partialListener.remove();
+
+        const text = (result.matches && result.matches[0]) || lastMatch;
         if (text) {
           document.getElementById('msgInput').value = text;
           hint.classList.remove('visible');
