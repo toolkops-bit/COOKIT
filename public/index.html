@@ -365,8 +365,9 @@
         appendRecipeBubble(data.recipe);
         history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
       } else {
-        appendMsg('bot', data.text);
-        history.push({ role: 'assistant', content: data.text });
+        const txt = data.text || data.error || 'לא הצלחתי להבין, נסה שוב.';
+        appendMsg('bot', txt);
+        history.push({ role: 'assistant', content: txt });
       }
     } catch {
       removeTyping(typingId);
