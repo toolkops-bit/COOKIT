@@ -397,7 +397,11 @@ app.post('/api/chat', async (req, res) => {
   if (!message) return res.status(400).json({ error: 'חסרה הודעה' });
 
   try {
-    // שלב 1: זהה כוונה
+    // שלב 1: זהה כוונה (כולל היסטוריה לטיפול בהמשך שיחה)
+    const intentMessages = [
+      ...history.slice(-4).map(h => ({ role: h.role, content: h.content })),
+      { role: 'user', content: message }
+    ];
     const intentRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 150,
@@ -406,10 +410,10 @@ app.post('/api/chat', async (req, res) => {
 - search: מחפש מתכונים קיימים מהאינטרנט
 - generate: רוצה מתכון מקורי מ-AI
 - chat: שאלה כללית על בישול / שיחה
-ingredients: מערך של מרכיבים שצוינו
-filters: מערך של סגנון/דיאטה שצוין (טבעוני, מהיר וכו')
+ingredients: מערך המרכיבים — אם ההודעה היא המשך שיחה ("עוד אחד", "אפשרות נוספת", "משהו אחר" וכדומה), חלץ את המרכיבים מההיסטוריה
+filters: מערך של סגנון/דיאטה
 query: שאלה חופשית אם chat`,
-      messages: [{ role: 'user', content: message }]
+      messages: intentMessages
     });
 
     let intent;
