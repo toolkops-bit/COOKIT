@@ -274,6 +274,35 @@
 
     .voice-hint { font-size: 12px; color: #e53e3e; text-align: center; padding: 4px 0; flex-shrink: 0; display: none; }
     .voice-hint.visible { display: block; }
+
+    /* QUICK ACTION BAR */
+    #quickActions {
+      display: none;
+      background: white;
+      border-top: 1px solid #ede8ff;
+      padding: 7px 12px;
+      gap: 7px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    #quickActions.visible { display: flex; }
+    .btn-quick {
+      background: #f5f0ff;
+      color: #7c3aed;
+      border: 1.5px solid #c4b5fd;
+      border-radius: 20px;
+      padding: 6px 13px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-quick:hover { background: #ede8ff; border-color: #8b5cf6; }
+    .btn-quick.ai { background: linear-gradient(135deg,#8b5cf6,#6d28d9); color: white; border-color: transparent; }
+    .btn-quick.clear { background: white; color: #999; border-color: #e5e5e5; }
+    .btn-quick.clear:hover { background: #fff0f0; color: #e53e3e; border-color: #e53e3e; }
   </style>
 </head>
 <body>
@@ -314,6 +343,12 @@
 
 <div class="voice-hint" id="voiceHint">🎤 מאזין... דבר עכשיו</div>
 
+<div id="quickActions">
+  <button class="btn-quick" onclick="quickAction('search')">🔍 חפש באינטרנט</button>
+  <button class="btn-quick ai" onclick="quickAction('generate')">✨ שף AI</button>
+  <button class="btn-quick clear" onclick="clearChat()">🗑️ נקה שיחה</button>
+</div>
+
 <div id="inputBar">
   <button class="btn-mic" id="btnMic" onclick="toggleVoice()">🎤</button>
   <input type="text" id="msgInput" placeholder="שאל אותי על מתכון..." autocomplete="off" />
@@ -330,6 +365,7 @@
   let recognition = null;
   let isListening = false;
   const _recipes = {};
+  let lastIngredients = [];
 
   document.getElementById('msgInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sendMessage();
@@ -366,12 +402,17 @@
       history.push({ role: 'user', content: text });
 
       if (data.type === 'ask_mode') {
+        if (data.ingredients?.length) lastIngredients = data.ingredients;
+        showQuickActions();
         appendModeChoice(data.ingredients, data.filters || []);
         history.push({ role: 'assistant', content: `שאלתי איזה סוג מתכון עם ${data.ingredients.join(', ')}` });
       } else if (data.type === 'recipes') {
+        if (data.ingredients?.length) lastIngredients = data.ingredients;
+        showQuickActions();
         appendSearchResults(data.recipes, data.ingredients);
         history.push({ role: 'assistant', content: `מצאתי ${data.recipes.length} מתכונים עם ${data.ingredients.join(', ')}` });
       } else if (data.type === 'recipe') {
+        showQuickActions();
         appendRecipeBubble(data.recipe);
         history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
       } else {
@@ -613,6 +654,70 @@
       '\n_נשלח מ-Cookit 🍳_',
     ].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, '_blank');
+  }
+
+  function showQuickActions() {
+    document.getElementById('quickActions').classList.add('visible');
+  }
+
+  async function quickAction(mode) {
+    if (lastIngredients.length === 0) {
+      appendMsg('bot', 'ספר לי קודם מה יש לך במקרר 🥕');
+      return;
+    }
+    const label = mode === 'search' ? '🔍 חפש באינטרנט' : '✨ שף AI';
+    appendMsg('user', label);
+    const typingId = appendTyping();
+    try {
+      const res = await fetch(API_BASE + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `תמצא מתכון עם ${lastIngredients.join(', ')}`, mode, ingredients: lastIngredients, history: history.slice(-8) })
+      });
+      const data = await res.json();
+      removeTyping(typingId);
+      if (data.type === 'recipes') {
+        appendSearchResults(data.recipes, data.ingredients || lastIngredients);
+        history.push({ role: 'assistant', content: `מצאתי מתכונים עם ${lastIngredients.join(', ')}` });
+      } else if (data.type === 'recipe') {
+        appendRecipeBubble(data.recipe);
+        history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
+      } else {
+        appendMsg('bot', data.text || data.error || 'שגיאה, נסה שוב.');
+      }
+    } catch {
+      removeTyping(typingId);
+      appendMsg('bot', 'שגיאה בחיבור לשרת.');
+    }
+  }
+
+  function clearChat() {
+    history = [];
+    lastIngredients = [];
+    document.getElementById('quickActions').classList.remove('visible');
+    const chat = document.getElementById('chatArea');
+    chat.innerHTML = `<div class="welcome" id="welcome">
+      <div class="icon">👨‍🍳</div>
+      <h2>שלום! מה נבשל היום?</h2>
+      <p>כתוב לי מה יש לך במקרר, ואני אמצא מתכון<br>— כתוב או דבר בקול 🎤</p>
+      <div class="mode-cards">
+        <div class="mode-card" onclick="sendSuggestion('תחפש מתכונים עם עוף ואורז')">
+          <div class="mode-icon">🔍</div><div class="mode-title">חיפוש מהאינטרנט</div>
+          <div class="mode-desc">מתכונים אמיתיים מאתרי בישול ישראליים</div>
+        </div>
+        <div class="mode-card" onclick="sendSuggestion('תיצור לי מתכון מקורי עם עוף ואורז')">
+          <div class="mode-icon">✨</div><div class="mode-title">שף AI</div>
+          <div class="mode-desc">מתכון מקורי שנוצר במיוחד בשבילך</div>
+        </div>
+      </div>
+      <div class="suggestions">
+        <div class="suggestion-chip" onclick="sendSuggestion('תחפש מתכונים עם עוף ואורז')">🍗 עוף ואורז</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('תיצור מתכון טבעוני מהיר')">🌱 טבעוני מהיר</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('רעיון לארוחת ערב רומנטית')">🕯️ ארוחה רומנטית</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('תיצור מתכון עם ביצים וגבינה')">🥚 ביצים וגבינה</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('תחפש עוגה פשוטה לשבת')">🎂 עוגה לשבת</div>
+      </div>
+    </div>`;
   }
 
   // ── AUTO TTS FOR TEXT RESPONSES ──
