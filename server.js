@@ -134,7 +134,7 @@ app.post('/api/generate', async (req, res) => {
 - כמויות מדויקות ומציאותיות לכל מרכיב
 - הוראות מפורטות עם זמנים ספציפיים
 - טיפ מקצועי שמשדרג את המתכון
-החזר תמיד JSON בלבד, ללא שום טקסט מחוץ ל-JSON. כלול שדה imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה שיצרת — רק מרכיבים שבאמת נמצאים בה (לדוגמה: "grilled chicken lemon herb sauce").`,
+החזר תמיד JSON בלבד, ללא שום טקסט מחוץ ל-JSON. כלול שדה imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה שיצרת — כלול את שיטת הבישול (grilled/baked/stir-fried/fried/steamed וכו') ורק מרכיבים שבאמת נמצאים בה (לדוגמה: "baked chicken lemon herb roasted").`,
       messages: [{
         role: 'user',
         content: `צור מתכון מקורי ומפורט בעברית עם המרכיבים: ${ingredients.join(', ')}.${filterInstruction}
@@ -486,7 +486,7 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
         max_tokens: 2500,
         system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
 {"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
-imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את המרכיבים הנראים לעין (לדוגמה: "grilled chicken saffron rice olives cheese"). אסור להוסיף מרכיבים שלא נמצאים במתכון.`,
+imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את שיטת הבישול (grilled/baked/stir-fried/steamed/fried וכו') + המרכיבים הנראים לעין. אסור להוסיף מרכיבים או שיטות שלא נמצאים במתכון. (לדוגמה: "grilled chicken saffron rice olives")`,
         messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן בלבד.' : ' הרגש חופשי להוסיף מרכיבים שמשדרגים את המנה.'} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
       });
       const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
