@@ -454,12 +454,12 @@ app.post('/api/chat', async (req, res) => {
       max_tokens: 150,
       system: `זהה את כוונת המשתמש והחזר JSON בלבד:
 {"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
-- search: מחפש מתכונים קיימים מהאינטרנט
-- generate: רוצה מתכון מקורי מ-AI
-- chat: שאלה כללית על בישול / שיחה
+- search: כל בקשה לחיפוש מהאינטרנט / "חפש" / "מה יש באינטרנט" / "מתכונים קיימים" — גם ללא מרכיבים
+- generate: כל בקשה ל"שף AI" / "תיצור" / "מתכון מקורי" — גם ללא מרכיבים
+- chat: רק שאלות כלליות על בישול שאינן בקשת מתכון
 ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה
 filters: מערך של סגנון/דיאטה
-strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה" / "אין לי יותר"`,
+strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה"`,
       messages: intentMessages
     });
 
@@ -476,6 +476,12 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
     if (forcedIngredients?.length > 0) {
       intent.ingredients = forcedIngredients;
       intent.filters = forcedFilters || intent.filters;
+    }
+
+    // אם search/generate ללא מרכיבים — בקש מרכיבים
+    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !forcedMode) {
+      const modeHe = intent.action === 'search' ? 'לחפש באינטרנט' : 'ליצור מתכון שף';
+      return res.json({ type: 'text', text: `בשמחה! ספר לי אילו מרכיבים יש לך ואני ${modeHe} 🥕` });
     }
 
     // אם יש מרכיבים ולא נבחר מצב — שאל קודם
