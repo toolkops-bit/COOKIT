@@ -297,7 +297,7 @@
       </div>
       <div class="mode-card" onclick="sendSuggestion('תיצור לי מתכון מקורי עם עוף ואורז')">
         <div class="mode-icon">✨</div>
-        <div class="mode-title">יצירה עם AI</div>
+        <div class="mode-title">שף AI</div>
         <div class="mode-desc">מתכון מקורי שנוצר במיוחד בשבילך</div>
       </div>
     </div>
@@ -377,6 +377,7 @@
       } else {
         const txt = data.text || data.error || 'לא הצלחתי להבין, נסה שוב.';
         appendMsg('bot', txt);
+        speakText(txt);
         history.push({ role: 'assistant', content: txt });
       }
     } catch {
@@ -465,12 +466,16 @@
       recipe.total_time ? `<span class="meta-chip">⏱ ${recipe.total_time}</span>` : '',
     ].join('');
 
+    const imgQuery = encodeURIComponent(recipe.imageQuery || recipe.title || 'food dish');
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="recipe-bubble" id="${id}">
         <div class="recipe-bubble-header">
           <h3>${recipe.title}</h3>
           ${recipe.description ? `<p>${recipe.description}</p>` : ''}
         </div>
+        <img src="https://source.unsplash.com/featured/600x280/?${imgQuery}" alt="${recipe.title}"
+          style="width:100%;height:180px;object-fit:cover;display:block;"
+          onerror="this.style.display='none'">
         ${metaChips ? `<div class="recipe-meta-row">${metaChips}</div>` : ''}
         <div class="recipe-section">
           <h4>מרכיבים:</h4>
@@ -501,16 +506,18 @@
     div.className = 'msg bot';
     const id = 'mode-' + Date.now();
     _modeChoices[id] = { ingredients, filters };
+    const question = `מצאתי מרכיבים: ${ingredients.join(', ')}. האם תרצה לנסות מתכון השף?`;
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="bubble mode-choice-bubble" id="${id}">
-        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ingredients.join(', ')}</strong><br>איזה סוג מתכון תרצה?</div>
+        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ingredients.join(', ')}</strong><br>האם תרצה לנסות מתכון השף?</div>
         <div style="display:flex;gap:8px">
           <button class="btn-mode-choice" onclick="chooseMode('search','${id}')">🔍 מתכון מהאינטרנט</button>
-          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${id}')">✨ מתכון מקורי AI</button>
+          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${id}')">✨ שף AI</button>
         </div>
       </div>`;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+    speakText(question);
   }
 
   async function chooseMode(mode, choiceId) {
@@ -518,7 +525,7 @@
     if (!ingredients) return;
     document.querySelectorAll(`#${choiceId} .btn-mode-choice`).forEach(b => b.disabled = true);
 
-    const label = mode === 'search' ? '🔍 חיפוש מהאינטרנט' : '✨ יצירה עם AI';
+    const label = mode === 'search' ? '🔍 חיפוש מהאינטרנט' : '✨ שף AI';
     appendMsg('user', label);
     const typingId = appendTyping();
 
@@ -579,6 +586,16 @@
       '\n_נשלח מ-Cookit 🍳_',
     ].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, '_blank');
+  }
+
+  // ── AUTO TTS FOR TEXT RESPONSES ──
+  function speakText(text) {
+    if (!text || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'he-IL';
+    utt.rate = 0.95;
+    speechSynthesis.speak(utt);
   }
 
   // ── VOICE INPUT ──
