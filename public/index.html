@@ -498,10 +498,10 @@
 
     if (recipe.imageQuery) {
       const imgEl = div.querySelector('.recipe-food-img');
-      fetch(API_BASE + '/api/food-image?q=' + encodeURIComponent(recipe.imageQuery))
-        .then(r => r.json())
-        .then(data => { if (data.url && imgEl) { imgEl.src = data.url; imgEl.style.display = 'block'; } })
-        .catch(() => {});
+      if (imgEl) {
+        imgEl.src = API_BASE + '/api/food-image?q=' + encodeURIComponent(recipe.imageQuery);
+        imgEl.style.display = 'block';
+      }
     }
   }
 
@@ -557,17 +557,37 @@
     }
   }
 
-  function toggleSpeak(id) {
+  async function toggleSpeak(id) {
     const recipe = _recipes[id];
     if (!recipe) return;
     const btn = document.getElementById('speak-' + id);
+
     if (isSpeaking) {
-      speechSynthesis.cancel();
       isSpeaking = false;
       document.querySelectorAll('.btn-speak-recipe').forEach(b => { b.classList.remove('speaking'); b.textContent = '🔊 קרא בקול'; });
+      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const TTS = window.Capacitor.Plugins.TextToSpeech;
+        if (TTS) try { await TTS.stop(); } catch {}
+      } else {
+        speechSynthesis.cancel();
+      }
       return;
     }
+
     const text = `${recipe.title}. ${recipe.description||''}. מרכיבים: ${(recipe.ingredients||[]).join(', ')}. הוראות הכנה: ${(recipe.instructions||[]).join('. ')}`;
+
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      const TTS = window.Capacitor.Plugins.TextToSpeech;
+      if (TTS) {
+        isSpeaking = true;
+        if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹ עצור'; }
+        try { await TTS.speak({ text, lang: 'he-IL', rate: 0.85, volume: 1.0 }); } catch {}
+        isSpeaking = false;
+        if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 קרא בקול'; }
+        return;
+      }
+    }
+
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'he-IL';
     utt.rate = 0.92;
@@ -596,8 +616,17 @@
   }
 
   // ── AUTO TTS FOR TEXT RESPONSES ──
-  function speakText(text) {
-    if (!text || !window.speechSynthesis) return;
+  async function speakText(text) {
+    if (!text) return;
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      const TTS = window.Capacitor.Plugins.TextToSpeech;
+      if (TTS) {
+        try { await TTS.stop(); } catch {}
+        try { await TTS.speak({ text, lang: 'he-IL', rate: 0.9, volume: 1.0, category: 'ambient' }); } catch {}
+        return;
+      }
+    }
+    if (!window.speechSynthesis) return;
     speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'he-IL';

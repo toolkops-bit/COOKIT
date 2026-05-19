@@ -390,19 +390,32 @@ app.post('/api/search-more', (req, res) => {
   res.json({ candidates: multi[chain] || [] });
 });
 
-// חיפוש תמונת אוכל דרך Serper Images
+// חיפוש תמונת אוכל דרך Serper + proxy ישיר (עוקף CORS/hotlink)
 app.get('/api/food-image', async (req, res) => {
-  const q = (req.query.q || 'food dish') + ' plated dish recipe food';
+  const q = (req.query.q || 'food dish') + ' plated dish food recipe';
   try {
     const r = await axios.post('https://google.serper.dev/images',
       { q, num: 10 },
       { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
     );
     const imgs = (r.data.images || []).filter(i => i.imageUrl && i.imageUrl.startsWith('http'));
-    const img = imgs[0];
-    res.json({ url: img ? img.imageUrl : null });
+    for (const img of imgs.slice(0, 5)) {
+      try {
+        const imgRes = await axios.get(img.imageUrl, {
+          responseType: 'arraybuffer',
+          timeout: 5000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' }
+        });
+        const ct = (imgRes.headers['content-type'] || 'image/jpeg').split(';')[0];
+        if (!ct.startsWith('image/')) continue;
+        res.set('Content-Type', ct);
+        res.set('Cache-Control', 'public, max-age=86400');
+        return res.send(Buffer.from(imgRes.data));
+      } catch {}
+    }
+    res.status(404).end();
   } catch {
-    res.json({ url: null });
+    res.status(500).end();
   }
 });
 
