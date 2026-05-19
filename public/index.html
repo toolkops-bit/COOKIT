@@ -466,14 +466,14 @@
       recipe.total_time ? `<span class="meta-chip">⏱ ${recipe.total_time}</span>` : '',
     ].join('');
 
-    const imgQuery = encodeURIComponent(recipe.imageQuery || recipe.title || 'food dish');
+    const imgQuery = encodeURIComponent((recipe.imageQuery || recipe.title || 'food').replace(/\s+/g, ','));
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="recipe-bubble" id="${id}">
         <div class="recipe-bubble-header">
           <h3>${recipe.title}</h3>
           ${recipe.description ? `<p>${recipe.description}</p>` : ''}
         </div>
-        <img src="https://source.unsplash.com/featured/600x280/?${imgQuery}" alt="${recipe.title}"
+        <img src="https://loremflickr.com/600/260/${imgQuery}" alt="${recipe.title}"
           style="width:100%;height:180px;object-fit:cover;display:block;"
           onerror="this.style.display='none'">
         ${metaChips ? `<div class="recipe-meta-row">${metaChips}</div>` : ''}
