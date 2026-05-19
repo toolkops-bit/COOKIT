@@ -134,12 +134,10 @@ app.post('/api/generate', async (req, res) => {
 - כמויות מדויקות ומציאותיות לכל מרכיב
 - הוראות מפורטות עם זמנים ספציפיים
 - טיפ מקצועי שמשדרג את המתכון
-- חוק מחייב: השתמש אך ורק במרכיבים שצוינו. אסור להוסיף מרכיבים שלא צוינו — לא שמן, לא מלח, לא תבלינים, לא שום דבר נוסף.
-
 החזר תמיד JSON בלבד, ללא שום טקסט מחוץ ל-JSON.`,
       messages: [{
         role: 'user',
-        content: `צור מתכון מקורי ומפורט בעברית. המרכיבים שיש לי (אלו בלבד, אל תוסיף): ${ingredients.join(', ')}.${filterInstruction}
+        content: `צור מתכון מקורי ומפורט בעברית עם המרכיבים: ${ingredients.join(', ')}.${filterInstruction}
 ${lastGeneratedTitle ? `\nחשוב: המתכון האחרון שיצרת היה "${lastGeneratedTitle}" — אסור לחזור על אותו סוג מנה. תהיה שונה לחלוטין.\n` : ''}
 השראה לפעם הזאת (אם לא מתנגש עם הפילטרים — השתמש בה, אחרת היה יצירתי בדרכך):
 • מטבח: ${cuisine}
@@ -471,9 +469,8 @@ query: שאלה חופשית אם chat`,
         model: 'claude-sonnet-4-6',
         max_tokens: 2500,
         system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
-{"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":""}
-חוק מחייב: השתמש אך ורק במרכיבים שהמשתמש ציין. אסור להוסיף מרכיבים שלא צוינו — לא שמן, לא מלח, לא תבלינים, לא שום דבר נוסף.`,
-        messages: [{ role: 'user', content: `המרכיבים שיש לי (אלו בלבד): ${intent.ingredients.join(', ')}.${filterInst} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
+{"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":""}`,
+        messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
       });
       const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const recipe = m3 ? JSON.parse(m3[0]) : null;
