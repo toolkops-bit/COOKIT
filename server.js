@@ -134,7 +134,7 @@ app.post('/api/generate', async (req, res) => {
 - כמויות מדויקות ומציאותיות לכל מרכיב
 - הוראות מפורטות עם זמנים ספציפיים
 - טיפ מקצועי שמשדרג את המתכון
-החזר תמיד JSON בלבד, ללא שום טקסט מחוץ ל-JSON.`,
+החזר תמיד JSON בלבד, ללא שום טקסט מחוץ ל-JSON. כלול שדה imageQuery: 2-3 מילים באנגלית לחיפוש תמונה (לדוגמה: "grilled chicken salad").`,
       messages: [{
         role: 'user',
         content: `צור מתכון מקורי ומפורט בעברית עם המרכיבים: ${ingredients.join(', ')}.${filterInstruction}
@@ -390,6 +390,22 @@ app.post('/api/search-more', (req, res) => {
   res.json({ candidates: multi[chain] || [] });
 });
 
+// חיפוש תמונת אוכל דרך Serper Images
+app.get('/api/food-image', async (req, res) => {
+  const q = (req.query.q || 'food dish') + ' food';
+  try {
+    const r = await axios.post('https://google.serper.dev/images',
+      { q, num: 5 },
+      { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
+    );
+    const imgs = (r.data.images || []).filter(i => i.imageUrl);
+    const img = imgs[0];
+    res.json({ url: img ? img.imageUrl : null });
+  } catch {
+    res.json({ url: null });
+  }
+});
+
 // ── CHAT ENDPOINT ──
 app.post('/api/chat', async (req, res) => {
   const { message, history = [] } = req.body;
@@ -405,13 +421,13 @@ app.post('/api/chat', async (req, res) => {
       model: 'claude-sonnet-4-6',
       max_tokens: 150,
       system: `זהה את כוונת המשתמש והחזר JSON בלבד:
-{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":""}
+{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
 - search: מחפש מתכונים קיימים מהאינטרנט
 - generate: רוצה מתכון מקורי מ-AI
 - chat: שאלה כללית על בישול / שיחה
-ingredients: מערך המרכיבים — אם ההודעה היא המשך שיחה ("עוד אחד", "אפשרות נוספת", "משהו אחר" וכדומה), חלץ את המרכיבים מההיסטוריה
+ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה
 filters: מערך של סגנון/דיאטה
-query: שאלה חופשית אם chat`,
+strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה" / "אין לי יותר"`,
       messages: intentMessages
     });
 
@@ -469,8 +485,9 @@ query: שאלה חופשית אם chat`,
         model: 'claude-sonnet-4-6',
         max_tokens: 2500,
         system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
-{"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":""}`,
-        messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
+{"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
+imageQuery: 2-3 מילים באנגלית לחיפוש תמונה של המנה (לדוגמה: "chicken rice tomatoes")`,
+        messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן בלבד.' : ' הרגש חופשי להוסיף מרכיבים שמשדרגים את המנה.'} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
       });
       const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const recipe = m3 ? JSON.parse(m3[0]) : null;

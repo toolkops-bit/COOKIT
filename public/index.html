@@ -466,15 +466,14 @@
       recipe.total_time ? `<span class="meta-chip">⏱ ${recipe.total_time}</span>` : '',
     ].join('');
 
-    const imgQuery = encodeURIComponent((recipe.imageQuery || recipe.title || 'food').replace(/\s+/g, ','));
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="recipe-bubble" id="${id}">
         <div class="recipe-bubble-header">
           <h3>${recipe.title}</h3>
           ${recipe.description ? `<p>${recipe.description}</p>` : ''}
         </div>
-        <img src="https://loremflickr.com/600/260/${imgQuery}" alt="${recipe.title}"
-          style="width:100%;height:180px;object-fit:cover;display:block;"
+        <img class="recipe-food-img" src="" alt="${recipe.title}"
+          style="width:100%;height:180px;object-fit:cover;display:none;"
           onerror="this.style.display='none'">
         ${metaChips ? `<div class="recipe-meta-row">${metaChips}</div>` : ''}
         <div class="recipe-section">
@@ -496,6 +495,14 @@
       </div>`;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+
+    if (recipe.imageQuery) {
+      const imgEl = div.querySelector('.recipe-food-img');
+      fetch(API_BASE + '/api/food-image?q=' + encodeURIComponent(recipe.imageQuery))
+        .then(r => r.json())
+        .then(data => { if (data.url && imgEl) { imgEl.src = data.url; imgEl.style.display = 'block'; } })
+        .catch(() => {});
+    }
   }
 
   const _modeChoices = {};
