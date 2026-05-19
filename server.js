@@ -391,6 +391,25 @@ app.post('/api/search-more', (req, res) => {
 });
 
 // חיפוש תמונת אוכל דרך Serper + proxy ישיר (עוקף CORS/hotlink)
+// TTS
+app.get('/api/tts', async (req, res) => {
+  const text = (req.query.text || '').substring(0, 200);
+  if (!text) return res.status(400).end();
+  try {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=iw&client=tw-ob&ttsspeed=0.9`;
+    const r = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 8000,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/91.0.4472.120 Mobile Safari/537.36' }
+    });
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(Buffer.from(r.data));
+  } catch {
+    res.status(500).end();
+  }
+});
+
 app.get('/api/food-image', async (req, res) => {
   const q = (req.query.q || 'food dish') + ' plated dish food recipe';
   try {

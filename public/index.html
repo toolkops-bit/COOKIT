@@ -366,6 +366,7 @@
   let isListening = false;
   const _recipes = {};
   let lastIngredients = [];
+  let _ttsAudio = null;
 
   document.getElementById('msgInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sendMessage();
@@ -619,14 +620,22 @@
 
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       const TTS = window.Capacitor.Plugins.TextToSpeech;
+      isSpeaking = true;
+      if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹ עצור'; }
+      let used = false;
       if (TTS) {
-        isSpeaking = true;
-        if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹ עצור'; }
-        try { await TTS.speak({ text, lang: 'he-IL', rate: 0.85, volume: 1.0 }); } catch {}
-        isSpeaking = false;
-        if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 קרא בקול'; }
-        return;
+        try { await TTS.speak({ text, lang: 'he-IL', rate: 0.85, volume: 1.0 }); used = true; } catch {}
       }
+      if (!used) {
+        try {
+          if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+          _ttsAudio = new Audio(API_BASE + '/api/tts?text=' + encodeURIComponent(text.substring(0, 200)));
+          await _ttsAudio.play();
+        } catch {}
+      }
+      isSpeaking = false;
+      if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 קרא בקול'; }
+      return;
     }
 
     const utt = new SpeechSynthesisUtterance(text);
@@ -723,13 +732,20 @@
   // ── AUTO TTS FOR TEXT RESPONSES ──
   async function speakText(text) {
     if (!text) return;
+    // נסה פלאגין Capacitor
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       const TTS = window.Capacitor.Plugins.TextToSpeech;
       if (TTS) {
         try { await TTS.stop(); } catch {}
-        try { await TTS.speak({ text, lang: 'he-IL', rate: 0.9, volume: 1.0, category: 'ambient' }); } catch {}
-        return;
+        try { await TTS.speak({ text: text.substring(0,200), lang: 'he-IL', rate: 0.9, volume: 1.0, category: 'ambient' }); return; } catch {}
       }
+      // fallback: אודיו מהשרת דרך Google TTS
+      try {
+        if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+        _ttsAudio = new Audio(API_BASE + '/api/tts?text=' + encodeURIComponent(text.substring(0, 200)));
+        await _ttsAudio.play();
+        return;
+      } catch {}
     }
     if (!window.speechSynthesis) return;
     speechSynthesis.cancel();
