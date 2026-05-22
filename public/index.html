@@ -13,6 +13,7 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; }
     body {
       font-family: 'Heebo', Arial, sans-serif;
       background: #f0ebe4;
@@ -247,9 +248,12 @@
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
+      width: 100%;
+      overflow: hidden;
     }
     #msgInput {
       flex: 1;
+      min-width: 0;
       border: 2px solid #e2d9f3;
       border-radius: 24px;
       padding: 10px 16px;
@@ -555,8 +559,8 @@
   }
 
   async function generateWithCountdown(ingredients, filters, typingId) {
-    let t = 30, done = false;
-    updateTypingText(typingId, `⏱ 30 שניות... יוצר מתכון`);
+    let t = 40, done = false;
+    updateTypingText(typingId, `⏱ 40 שניות... יוצר מתכון`);
     const timer = setInterval(() => {
       if (!done) {
         t = Math.max(1, t - 1);
