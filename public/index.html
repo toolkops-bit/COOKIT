@@ -267,6 +267,27 @@
       color: white;
       animation: pulse-mic 1s ease-in-out infinite;
     }
+    .btn-voice-out {
+      height: 44px;
+      padding: 0 12px;
+      background: white;
+      color: #8b5cf6;
+      border: 2px solid #c4b5fd;
+      border-radius: 22px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+      font-family: 'Heebo', sans-serif;
+      transition: all 0.18s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-voice-out.on {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
     @keyframes pulse-mic {
       0%,100% { box-shadow: 0 0 0 0 rgba(229,62,62,0.4); }
       50%      { box-shadow: 0 0 0 8px rgba(229,62,62,0); }
@@ -372,6 +393,7 @@
 <div id="inputBar">
   <button class="btn-mic" id="btnMic" onclick="toggleVoice()">🎤</button>
   <input type="text" id="msgInput" placeholder="שאל אותי על מתכון..." autocomplete="off" />
+  <button class="btn-voice-out" id="btnVoiceOut" onclick="toggleVoiceMode()">🔇 קול</button>
   <button class="btn-send" onclick="sendMessage()">➤</button>
 </div>
 
@@ -874,13 +896,19 @@
 
   function toggleVoiceMode() {
     voiceEnabled = !voiceEnabled;
+    _syncVoiceButtons();
+  }
+  function _syncVoiceButtons() {
+    const on = voiceEnabled;
     const hBtn = document.getElementById('btnVoiceToggle');
     const qBtn = document.getElementById('btnVoiceQuick');
-    if (hBtn) { hBtn.textContent = voiceEnabled ? '🔊' : '🔇'; hBtn.classList.toggle('on', voiceEnabled); }
-    if (qBtn) { qBtn.textContent = voiceEnabled ? '🔊 קול פעיל' : '🔇 קול כבוי';
-      qBtn.style.background = voiceEnabled ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : '';
-      qBtn.style.color = voiceEnabled ? 'white' : '';
-      qBtn.style.borderColor = voiceEnabled ? 'transparent' : ''; }
+    const oBtn = document.getElementById('btnVoiceOut');
+    if (hBtn) { hBtn.textContent = on ? '🔊' : '🔇'; hBtn.classList.toggle('on', on); }
+    if (qBtn) {
+      qBtn.textContent = on ? '🔊 קול פעיל' : '🔇 קול כבוי';
+      qBtn.style.cssText = on ? 'background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border-color:transparent' : '';
+    }
+    if (oBtn) { oBtn.textContent = on ? '🔊 קול' : '🔇 קול'; oBtn.classList.toggle('on', on); }
   }
 
   // ── AUTO TTS FOR TEXT RESPONSES ──
