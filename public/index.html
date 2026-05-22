@@ -365,7 +365,8 @@
 <div id="quickActions">
   <button class="btn-quick" onclick="quickAction('search')">🔍 חפש באינטרנט</button>
   <button class="btn-quick ai" onclick="quickAction('generate')">✨ שף AI</button>
-  <button class="btn-quick clear" onclick="clearChat()">🗑️ נקה שיחה</button>
+  <button class="btn-quick" id="btnVoiceQuick" onclick="toggleVoiceMode()">🔇 קול כבוי</button>
+  <button class="btn-quick clear" onclick="clearChat()">🗑️ נקה</button>
 </div>
 
 <div id="inputBar">
@@ -494,49 +495,77 @@
   }
 
   async function generateStreaming(ingredients, filters, strictIngredients, typingId) {
-    let accumulated = '', titleShown = false;
+    let accumulated = '', titleShown = false, isDone = false;
+    let timeLeft = 40;
+
+    updateTypingText(typingId, `⏱ ${timeLeft} שניות... יוצר מתכון`);
+    const timer = setInterval(() => {
+      if (!isDone && !titleShown) {
+        timeLeft = Math.max(1, timeLeft - 1);
+        updateTypingText(typingId, `⏱ ${timeLeft} שניות... יוצר מתכון`);
+      }
+    }, 1000);
+
+    const finish = (recipe) => {
+      isDone = true;
+      clearInterval(timer);
+      removeTyping(typingId);
+      if (recipe) {
+        appendRecipeBubble(recipe);
+        history.push({ role: 'assistant', content: `יצרתי מתכון: ${recipe.title}` });
+      } else {
+        appendMsg('bot', 'שגיאה ביצירת מתכון, נסה שוב.');
+      }
+    };
+
     try {
       const response = await fetch(API_BASE + '/api/generate-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ingredients, filters, strictIngredients })
       });
+
+      // Fallback for Android WebViews without streaming support
+      if (!response.body || !response.body.getReader) {
+        const fb = await fetch(API_BASE + '/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `תיצור מתכון עם ${ingredients.join(', ')}`, mode: 'generate', ingredients, filters })
+        });
+        const d = await fb.json();
+        finish(d?.type === 'recipe' ? d.recipe : null);
+        return;
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buf = '';
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n\n');
-        buf = lines.pop();
-        for (const line of lines) {
+        const parts = buf.split('\n\n');
+        buf = parts.pop();
+        for (const line of parts) {
           if (!line.startsWith('data: ')) continue;
           let ev;
           try { ev = JSON.parse(line.slice(6)); } catch { continue; }
-          if (ev.done) {
-            removeTyping(typingId);
-            if (ev.recipe) {
-              appendRecipeBubble(ev.recipe);
-              history.push({ role: 'assistant', content: `יצרתי מתכון: ${ev.recipe.title}` });
-            } else {
-              appendMsg('bot', 'שגיאה ביצירת מתכון, נסה שוב.');
-            }
-            return;
-          }
+          if (ev.done) { finish(ev.recipe); return; }
           if (ev.d) {
             accumulated += ev.d;
             if (!titleShown) {
               const tm = accumulated.match(/"title"\s*:\s*"([^"]{4,})"/);
-              if (tm) { updateTypingText(typingId, `✨ יוצר: ${tm[1]}...`); titleShown = true; }
+              if (tm) {
+                titleShown = true;
+                clearInterval(timer);
+                updateTypingText(typingId, `✨ יוצר: ${tm[1]}...`);
+              }
             }
           }
         }
       }
     } catch {
-      removeTyping(typingId);
-      appendMsg('bot', 'שגיאה בחיבור לשרת.');
+      finish(null);
     }
   }
 
@@ -823,6 +852,9 @@
         <div class="suggestion-chip" onclick="sendSuggestion('תחפש עוגה פשוטה לשבת')">🎂 עוגה לשבת</div>
       </div>
     </div>`;
+    // Restore voice button state after clearChat
+    const qBtn = document.getElementById('btnVoiceQuick');
+    if (qBtn) { qBtn.textContent = voiceEnabled ? '🔊 קול פעיל' : '🔇 קול כבוי'; }
   }
 
   // ── STRIP MARKDOWN BEFORE TTS ──
@@ -842,9 +874,13 @@
 
   function toggleVoiceMode() {
     voiceEnabled = !voiceEnabled;
-    const btn = document.getElementById('btnVoiceToggle');
-    btn.textContent = voiceEnabled ? '🔊' : '🔇';
-    btn.classList.toggle('on', voiceEnabled);
+    const hBtn = document.getElementById('btnVoiceToggle');
+    const qBtn = document.getElementById('btnVoiceQuick');
+    if (hBtn) { hBtn.textContent = voiceEnabled ? '🔊' : '🔇'; hBtn.classList.toggle('on', voiceEnabled); }
+    if (qBtn) { qBtn.textContent = voiceEnabled ? '🔊 קול פעיל' : '🔇 קול כבוי';
+      qBtn.style.background = voiceEnabled ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : '';
+      qBtn.style.color = voiceEnabled ? 'white' : '';
+      qBtn.style.borderColor = voiceEnabled ? 'transparent' : ''; }
   }
 
   // ── AUTO TTS FOR TEXT RESPONSES ──
