@@ -575,7 +575,7 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
       const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
       const aiRes = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
+        max_tokens: 2000,
         system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
 {"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
 imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את שיטת הבישול (grilled/baked/stir-fried/steamed/fried וכו') + המרכיבים הנראים לעין. אסור להוסיף מרכיבים או שיטות שלא נמצאים במתכון.`,
