@@ -296,21 +296,27 @@
       color: white;
       animation: pulse-mic 1s ease-in-out infinite;
     }
+    #micColumn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
     .btn-voice-out {
-      height: 36px;
-      padding: 0 8px;
+      height: 20px;
+      padding: 0 7px;
       background: white;
       color: #8b5cf6;
-      border: 2px solid #c4b5fd;
-      border-radius: 18px;
-      font-size: 12px;
+      border: 1.5px solid #c4b5fd;
+      border-radius: 10px;
+      font-size: 10px;
       font-weight: 700;
       cursor: pointer;
-      display: flex; align-items: center; gap: 2px;
+      display: flex; align-items: center;
       font-family: 'Heebo', sans-serif;
       transition: all 0.18s;
       white-space: nowrap;
-      flex-shrink: 0;
     }
     .btn-voice-out.on {
       background: #8b5cf6;
@@ -425,7 +431,10 @@
 </div>
 
 <div id="inputBar">
-  <button class="btn-mic" id="btnMic" onclick="toggleVoice()">🎤</button>
+  <div id="micColumn">
+    <button class="btn-voice-out" id="btnVoiceOut" onclick="toggleVoiceMode()">🔇 קול</button>
+    <button class="btn-mic" id="btnMic" onclick="toggleVoice()">🎤</button>
+  </div>
   <input type="text" id="msgInput" placeholder="שאל אותי על מתכון..." autocomplete="off" />
   <button class="btn-send" onclick="sendMessage()">➤</button>
 </div>
