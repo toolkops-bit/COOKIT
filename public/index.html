@@ -254,6 +254,24 @@
     .dom-high { background: #d1fae5; color: #065f46; }
     .dom-mid  { background: #fef3c7; color: #92400e; }
     .dom-low  { background: #f3f4f6; color: #6b7280; }
+    .btn-find-more {
+      display: block;
+      width: calc(100% - 32px);
+      margin: 10px 16px;
+      padding: 9px;
+      background: #f5f0ff;
+      color: #7c3aed;
+      border: 1.5px solid #c4b5fd;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+      text-align: center;
+      transition: all 0.18s;
+    }
+    .btn-find-more:hover { background: #ede8ff; border-color: #8b5cf6; }
+    .btn-find-more:disabled { opacity: 0.5; cursor: default; }
 
     /* INPUT BAR */
     #inputBar {
@@ -493,6 +511,10 @@
       err_load: 'לא הצלחתי לטעון את המתכון.',
       err_unknown: 'לא הצלחתי להבין, נסה שוב.',
       err_generic: 'שגיאה, נסה שוב.',
+      find_more: '🔎 מצא עוד מקורות (כולל מדיה חברתית)',
+      more_header: '📱 מקורות נוספים',
+      loading_more: 'מחפש...',
+      no_more: 'לא נמצאו מקורות נוספים',
     },
     en: {
       subtitle: 'Your smart cooking assistant',
@@ -521,6 +543,10 @@
       err_load: 'Could not load the recipe.',
       err_unknown: 'I didn\'t understand, please try again.',
       err_generic: 'Error, please try again.',
+      find_more: '🔎 Find more sources (incl. social media)',
+      more_header: '📱 More sources',
+      loading_more: 'Searching...',
+      no_more: 'No additional sources found',
     }
   };
 
@@ -563,6 +589,7 @@
   let recognition = null;
   let isListening = false;
   const _recipes = {};
+  const _searchData = {};
   let lastIngredients = [];
   let _ttsAudio = null;
   let pendingModeChoiceId = null;
@@ -633,7 +660,7 @@
       } else if (data.type === 'recipes') {
         if (data.ingredients?.length) lastIngredients = data.ingredients;
         showQuickActions();
-        appendSearchResults(data.recipes, data.ingredients);
+        appendSearchResults(data.recipes, data.ingredients, data.filters);
         history.push({ role: 'assistant', content: T[appLang].found_recipes(data.recipes.length, data.ingredients) });
       } else if (data.type === 'recipe') {
         showQuickActions();
@@ -709,11 +736,13 @@
     }
   }
 
-  function appendSearchResults(recipes, ingredients) {
+  function appendSearchResults(recipes, ingredients, filters) {
     const chat = document.getElementById('chatArea');
     const div = document.createElement('div');
     div.className = 'msg bot';
     const t = T[appLang];
+    const bubbleId = 'results-' + Date.now();
+    _searchData[bubbleId] = { ingredients, filters: filters || [] };
 
     const items = recipes.map(r => {
       const isHigh = r.dominance === 'גבוה' || r.dominance === 'high';
@@ -728,12 +757,57 @@
     }).join('');
 
     div.innerHTML = `<div class="avatar">🍳</div>
-      <div class="results-bubble">
+      <div class="results-bubble" id="${bubbleId}">
         <div class="results-bubble-header">${t.found_recipes(recipes.length, ingredients)}</div>
         ${items}
+        <button class="btn-find-more" onclick="findMoreSources('${bubbleId}')">${t.find_more}</button>
       </div>`;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function findMoreSources(bubbleId) {
+    const data = _searchData[bubbleId];
+    if (!data) return;
+    const bubble = document.getElementById(bubbleId);
+    if (!bubble) return;
+    const btn = bubble.querySelector('.btn-find-more');
+    if (btn) { btn.disabled = true; btn.textContent = T[appLang].loading_more; }
+    try {
+      const res = await fetch(API_BASE + '/api/search-more-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: data.ingredients, filters: data.filters, lang: appLang })
+      });
+      const json = await res.json();
+      const results = json.results || [];
+      if (btn) btn.remove();
+      if (results.length === 0) {
+        const noMore = document.createElement('div');
+        noMore.style.cssText = 'padding:10px 16px;font-size:13px;color:#999;text-align:center';
+        noMore.textContent = T[appLang].no_more;
+        bubble.appendChild(noMore);
+        return;
+      }
+      const header = document.createElement('div');
+      header.className = 'results-bubble-header';
+      header.style.cssText = 'border-top:1px solid #ede8ff;margin-top:4px';
+      header.textContent = T[appLang].more_header;
+      bubble.appendChild(header);
+      results.forEach(r => {
+        const icon = r.source === 'TikTok' ? '🎵' : r.source === 'Instagram' ? '📸' : '▶️';
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        item.onclick = () => window.open(r.url, '_blank');
+        item.innerHTML = `<h4>${icon} ${r.title}</h4>
+          <p>${r.description || ''}</p>
+          <div class="src">${r.source || ''}</div>`;
+        bubble.appendChild(item);
+      });
+      document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+    } catch {
+      if (btn) { btn.disabled = false; btn.textContent = T[appLang].find_more; }
+    }
   }
 
   async function loadRecipe(encodedUrl, title) {
@@ -855,7 +929,7 @@
       const data = await res.json();
       removeTyping(typingId);
       if (data.type === 'recipes') {
-        appendSearchResults(data.recipes, data.ingredients || ingredients);
+        appendSearchResults(data.recipes, data.ingredients || ingredients, filters);
       } else {
         appendMsg('bot', data.text || data.error || T[appLang].err_generic);
       }

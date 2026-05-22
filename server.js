@@ -227,11 +227,16 @@ app.post('/api/recipe-details', async (req, res) => {
         content: isEn
           ? `Based on the recipe name "${title}" from ${url}, create a full recipe in English with preparation instructions. Return JSON only:
         {
-          "title": "Recipe name",`
+          "title": "Recipe name",
+          "ingredients": ["ingredient 1 + amount", "ingredient 2 + amount"],
+          "instructions": ["step 1", "step 2"],
+          "time": "prep time",
+          "source": "${url}"
+        }`
           : `בהתבסס על שם המתכון "${title}" מהאתר ${url}, צור מתכון מלא בעברית עם הוראות הכנה.
         החזר JSON בלבד:
         {
-          "title": "שם המתכון",`
+          "title": "שם המתכון",
           "ingredients": ["מרכיב 1 + כמות", "מרכיב 2 + כמות"],
           "instructions": ["שלב 1", "שלב 2"],
           "time": "זמן הכנה",
@@ -645,7 +650,7 @@ Analyze search results and return JSON only:
       });
       const m2 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const parsed = m2 ? JSON.parse(m2[0]) : { recipes: [] };
-      return res.json({ type: 'recipes', recipes: parsed.recipes || [], ingredients: intent.ingredients });
+      return res.json({ type: 'recipes', recipes: parsed.recipes || [], ingredients: intent.ingredients, filters: intent.filters });
     }
 
     if (effectiveAction === 'generate') {
@@ -706,6 +711,45 @@ imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנ�
   } catch (err) {
     console.error('Chat error:', err.message);
     res.status(500).json({ error: 'שגיאה, נסה שוב' });
+  }
+});
+
+// מקורות נוספים + מדיה חברתית
+app.post('/api/search-more-sources', async (req, res) => {
+  const { ingredients, filters, lang } = req.body;
+  if (!ingredients?.length) return res.status(400).json({ error: 'missing ingredients' });
+  const isEn = lang === 'en';
+  const filterText = (filters || []).length > 0 ? ` ${filters.join(' ')}` : '';
+  const q = isEn
+    ? `recipe with ${ingredients.join(' ')}${filterText}`
+    : `מתכון עם ${ingredients.join(' ')}${filterText}`;
+  try {
+    const [videoRes, socialRes] = await Promise.allSettled([
+      axios.post('https://google.serper.dev/videos',
+        { q, gl: isEn ? 'us' : 'il', hl: isEn ? 'en' : 'iw', num: 6 },
+        { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
+      ),
+      axios.post('https://google.serper.dev/search',
+        { q: q + ' site:tiktok.com OR site:instagram.com', gl: isEn ? 'us' : 'il', hl: isEn ? 'en' : 'iw', num: 4 },
+        { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
+      )
+    ]);
+    const videos = videoRes.status === 'fulfilled' ? (videoRes.value.data.videos || []) : [];
+    const socials = socialRes.status === 'fulfilled' ? (socialRes.value.data.organic || []) : [];
+    const results = [
+      ...videos.slice(0, 5).map(v => ({
+        title: v.title, description: v.snippet || '',
+        source: v.channel || 'YouTube', url: v.link, type: 'video'
+      })),
+      ...socials.slice(0, 3).map(s => ({
+        title: s.title, description: s.snippet || '',
+        source: s.link.includes('tiktok') ? 'TikTok' : 'Instagram', url: s.link, type: 'social'
+      }))
+    ];
+    res.json({ results });
+  } catch (err) {
+    console.error('Search more sources:', err.message);
+    res.status(500).json({ error: isEn ? 'Error, try again' : 'שגיאה, נסה שוב' });
   }
 });
 
