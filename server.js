@@ -488,8 +488,8 @@ app.post('/api/chat', async (req, res) => {
       { role: 'user', content: message }
     ];
     const intentRes = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 150,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 120,
       system: `זהה את כוונת המשתמש והחזר JSON בלבד:
 {"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
 - search: כל בקשה לחיפוש מהאינטרנט / "חפש" / "מה יש באינטרנט" / "מתכונים קיימים" — גם ללא מרכיבים
@@ -550,8 +550,8 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
       if (results.length === 0) return res.json({ type: 'text', text: 'לא מצאתי מתכונים מתאימים. נסה מרכיבים אחרים או בקש שאייצר מתכון.' });
 
       const aiRes = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
         system: `אתה עוזר בישול ידידותי. המשתמש חיפש מתכונים עם: ${intent.ingredients.join(', ')}.
 נתח את תוצאות החיפוש והחזר JSON בלבד:
 {"recipes":[{"title":"","description":"עד 15 מילים","dominance":"גבוה|בינוני|נמוך","source":"","url":""}]}`,
@@ -575,7 +575,7 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
       const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
       const aiRes = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2500,
+        max_tokens: 1500,
         system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
 {"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
 imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את שיטת הבישול (grilled/baked/stir-fried/steamed/fried וכו') + המרכיבים הנראים לעין. אסור להוסיף מרכיבים או שיטות שלא נמצאים במתכון.`,
