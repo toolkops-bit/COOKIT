@@ -18,19 +18,8 @@ const GOV_CHAINS = new Set(['shufersal', 'victory', 'hazi-hinam']);
 const app = express();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-const ALLOWED_ORIGINS = [
-  'https://cookit-production.up.railway.app',
-  'http://localhost:3000',
-  'capacitor://localhost',
-  'http://localhost',
-];
-app.use(cors({
-  origin: (origin, cb) => {
-    // בקשות בלי origin (APK native, curl) — מותרות
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
-  }
-}));
+// CORS פתוח — הגנה אמיתית נעשית דרך rate limiting, לא CORS (שלא עובד ל-mobile)
+app.use(cors());
 
 // ── RATE LIMITING ─────────────────────────────────────────────────────────────
 // כללי: 60 בקשות לדקה לכל IP
