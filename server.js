@@ -17,24 +17,26 @@ const GOV_CHAINS = new Set(['shufersal', 'victory', 'hazi-hinam']);
 
 const app = express();
 
+// Railway פועל מאחורי proxy — חובה לסמוך על X-Forwarded-For לקבלת IP אמיתי
+app.set('trust proxy', 1);
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// CORS פתוח — הגנה אמיתית נעשית דרך rate limiting, לא CORS (שלא עובד ל-mobile)
 app.use(cors());
 
 // ── RATE LIMITING ─────────────────────────────────────────────────────────────
-// כללי: 60 בקשות לדקה לכל IP
+// כללי: 120 בקשות לדקה לכל IP
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 120,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'יותר מדי בקשות, נסה שוב עוד דקה.' }
 });
 
-// API: 15 בקשות לדקה (מגן על עלויות Claude/Serper)
+// API: 30 בקשות לדקה לכל IP (מגן על עלויות Claude/Serper)
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 15,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'הגעת למגבלת הבקשות. המתן דקה ונסה שוב.' }
