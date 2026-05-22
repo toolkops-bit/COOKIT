@@ -367,6 +367,7 @@
   const _recipes = {};
   let lastIngredients = [];
   let _ttsAudio = null;
+  let pendingModeChoiceId = null;
 
   document.getElementById('msgInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sendMessage();
@@ -382,6 +383,17 @@
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
+
+    // תגובה קולית/טקסטואלית לשאלת בחירת מצב פתוחה
+    if (pendingModeChoiceId) {
+      const wantsAI = /שף|ai|AI|מקורי|כן|יצירת|אני רוצה שף/.test(text);
+      const wantsSearch = /אינטרנט|חיפוש|חפש|לא|מהרשת|מהאינטרנט/.test(text);
+      if (wantsAI || wantsSearch) {
+        appendMsg('user', text);
+        chooseMode(wantsAI ? 'generate' : 'search', pendingModeChoiceId);
+        return;
+      }
+    }
 
     const welcome = document.getElementById('welcome');
     if (welcome) welcome.remove();
@@ -558,7 +570,7 @@
     const question = `מצאתי מרכיבים: ${ingredients.join(', ')}. האם תרצה לנסות מתכון השף?`;
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="bubble mode-choice-bubble" id="${id}">
-        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ingredients.join(', ')}</strong><br>האם תרצה לנסות מתכון השף?</div>
+        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ingredients.join(', ')}</strong><br>האם תרצה לנסות מתכון השף? (אמור "כן" לשף AI או "חיפוש" לאינטרנט)</div>
         <div style="display:flex;gap:8px">
           <button class="btn-mode-choice" onclick="chooseMode('search','${id}')">🔍 מתכון מהאינטרנט</button>
           <button class="btn-mode-choice ai" onclick="chooseMode('generate','${id}')">✨ שף AI</button>
@@ -566,12 +578,14 @@
       </div>`;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+    pendingModeChoiceId = id;
     speakText(question);
   }
 
   async function chooseMode(mode, choiceId) {
     const { ingredients, filters } = _modeChoices[choiceId] || {};
     if (!ingredients) return;
+    pendingModeChoiceId = null;
     document.querySelectorAll(`#${choiceId} .btn-mode-choice`).forEach(b => b.disabled = true);
 
     const label = mode === 'search' ? '🔍 חיפוש מהאינטרנט' : '✨ שף AI';

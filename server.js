@@ -458,7 +458,7 @@ app.post('/api/chat', async (req, res) => {
 - generate: כל בקשה ל"שף AI" / "תיצור" / "מתכון מקורי" — גם ללא מרכיבים
 - chat: רק שאלות כלליות על בישול שאינן בקשת מתכון
 ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה
-filters: מערך של סגנון/דיאטה
+filters: מערך של סגנון/דיאטה/מטבח — כולל מטבחים: "איטלקי","יווני","טורקי","מרוקאי","אסייתי","צרפתי","הודי","ספרדי","מקסיקני","יפני","לבנוני","פרסי","ישראלי","ים תיכוני" וכו'. כלול גם דיאטות: "טבעוני","צמחוני","ללא גלוטן" וכו'
 strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה"`,
       messages: intentMessages
     });
@@ -515,17 +515,21 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
     }
 
     if (effectiveAction === 'generate') {
-      const CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני'];
-      const METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
-      const rand = a => a[Math.floor(Math.random()*a.length)];
-      const filterInst = intent.filters.length > 0 ? ` חייב להיות: ${intent.filters.join(', ')}.` : '';
+      const GEN_CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
+      const GEN_METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
+      const randI = a => a[Math.floor(Math.random()*a.length)];
+      const CUISINE_KW = ['איטלקי','יווני','טורקי','מרוקאי','אסייתי','צרפתי','הודי','ספרדי','מקסיקני','יפני','לבנוני','פרסי','ישראלי','ים תיכוני','מזרח תיכוני','תאילנדי','סיני','קוריאני'];
+      const detectedCuisine = intent.filters.find(f => CUISINE_KW.some(c => f.includes(c)));
+      const cuisineInst = detectedCuisine ? `מטבח: ${detectedCuisine} (חובה לשמור על אותנטיות המטבח)` : `השראה למטבח: ${randI(GEN_CUISINES)}`;
+      const nonCuisineFilters = intent.filters.filter(f => !CUISINE_KW.some(c => f.includes(c)));
+      const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
       const aiRes = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 2500,
         system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
 {"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
-imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את שיטת הבישול (grilled/baked/stir-fried/steamed/fried וכו') + המרכיבים הנראים לעין. אסור להוסיף מרכיבים או שיטות שלא נמצאים במתכון. (לדוגמה: "grilled chicken saffron rice olives")`,
-        messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן בלבד.' : ' הרגש חופשי להוסיף מרכיבים שמשדרגים את המנה.'} השראה: מטבח ${rand(CUISINES)}, ${rand(METHODS)}.` }]
+imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את שיטת הבישול (grilled/baked/stir-fried/steamed/fried וכו') + המרכיבים הנראים לעין. אסור להוסיף מרכיבים או שיטות שלא נמצאים במתכון.`,
+        messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן בלבד.' : ' הרגש חופשי להוסיף מרכיבים שמשדרגים את המנה.'} ${cuisineInst}, שיטת בישול: ${randI(GEN_METHODS)}.` }]
       });
       const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const recipe = m3 ? JSON.parse(m3[0]) : null;
