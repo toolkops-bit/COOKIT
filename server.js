@@ -484,7 +484,7 @@ app.post('/api/chat', async (req, res) => {
   try {
     // שלב 1: זהה כוונה (כולל היסטוריה לטיפול בהמשך שיחה)
     const intentMessages = [
-      ...history.slice(-4).map(h => ({ role: h.role, content: h.content })),
+      ...history.slice(-8).map(h => ({ role: h.role, content: h.content })),
       { role: 'user', content: message }
     ];
     const intentRes = await anthropic.messages.create({
@@ -496,7 +496,7 @@ app.post('/api/chat', async (req, res) => {
 - generate: כל בקשה ל"שף AI" / "תיצור" / "מתכון מקורי" — גם ללא מרכיבים
 - chat: רק שאלות כלליות על בישול שאינן בקשת מתכון
 ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה
-filters: מערך של סגנון/דיאטה/מטבח — כולל מטבחים: "איטלקי","יווני","טורקי","מרוקאי","אסייתי","צרפתי","הודי","ספרדי","מקסיקני","יפני","לבנוני","פרסי","ישראלי","ים תיכוני" וכו'. כלול גם דיאטות: "טבעוני","צמחוני","ללא גלוטן" וכו'
+filters: מערך של סגנון/דיאטה/מטבח — כולל מטבחים: "איטלקי","יווני","טורקי","מרוקאי","אסייתי","צרפתי","הודי","ספרדי","מקסיקני","יפני","לבנוני","פרסי","ישראלי","ים תיכוני","ארגנטינאי","ברזילאי","תאילנדי","סיני","קוריאני","וייטנאמי","אתיופי","גרמני","רוסי" וכו'. כלול גם דיאטות: "טבעוני","צמחוני","ללא גלוטן" וכו'
 strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה"`,
       messages: intentMessages
     });
@@ -511,23 +511,33 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
     const forcedMode = req.body.mode;
     const forcedIngredients = req.body.ingredients;
     const forcedFilters = req.body.filters;
+    const lastIngredientsHint = req.body.lastIngredients;
+
     if (forcedIngredients?.length > 0) {
       intent.ingredients = forcedIngredients;
       intent.filters = forcedFilters || intent.filters;
     }
 
+    // המשך שיחה: הודעה ללא מרכיבים אך יש מרכיבים מהסיבוב הקודם — קפוץ ישירות לפעולה
+    let continuationMode = null;
+    if (!forcedMode && !forcedIngredients?.length && intent.ingredients.length === 0 &&
+        lastIngredientsHint?.length > 0 && (intent.action === 'generate' || intent.action === 'search')) {
+      intent.ingredients = lastIngredientsHint;
+      continuationMode = intent.action;
+    }
+
     // אם search/generate ללא מרכיבים — בקש מרכיבים
-    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !forcedMode) {
+    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !forcedMode && !continuationMode) {
       const modeHe = intent.action === 'search' ? 'לחפש באינטרנט' : 'ליצור מתכון שף';
       return res.json({ type: 'text', text: `בשמחה! ספר לי אילו מרכיבים יש לך ואני ${modeHe} 🥕` });
     }
 
     // אם יש מרכיבים ולא נבחר מצב — שאל קודם
-    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length > 0 && !forcedMode) {
+    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length > 0 && !forcedMode && !continuationMode) {
       return res.json({ type: 'ask_mode', ingredients: intent.ingredients, filters: intent.filters });
     }
 
-    const effectiveAction = forcedMode || intent.action;
+    const effectiveAction = forcedMode || continuationMode || intent.action;
 
     if ((effectiveAction === 'search') && intent.ingredients.length > 0) {
       const filterText = intent.filters.length > 0 ? ` ${intent.filters.join(' ')}` : '';
@@ -556,9 +566,11 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
       const GEN_CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
       const GEN_METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
       const randI = a => a[Math.floor(Math.random()*a.length)];
-      const CUISINE_KW = ['איטלקי','יווני','טורקי','מרוקאי','אסייתי','צרפתי','הודי','ספרדי','מקסיקני','יפני','לבנוני','פרסי','ישראלי','ים תיכוני','מזרח תיכוני','תאילנדי','סיני','קוריאני'];
+      const CUISINE_KW = ['איטלקי','יווני','טורקי','מרוקאי','אסייתי','צרפתי','הודי','ספרדי','מקסיקני','יפני','לבנוני','פרסי','ישראלי','ים תיכוני','מזרח תיכוני','תאילנדי','סיני','קוריאני','ארגנטינאי','ברזילאי','אמריקאי','אתיופי','וייטנאמי','אפריקאי','גרמני','פולני','רוסי'];
       const detectedCuisine = intent.filters.find(f => CUISINE_KW.some(c => f.includes(c)));
-      const cuisineInst = detectedCuisine ? `מטבח: ${detectedCuisine} (חובה לשמור על אותנטיות המטבח)` : `השראה למטבח: ${randI(GEN_CUISINES)}`;
+      const cuisineInst = detectedCuisine
+        ? `חובה: המטבח הוא ${detectedCuisine} בלבד — השתמש אך ורק במרכיבים, תבלינים וטכניקות של מטבח זה. אסור לערבב עם מטבח אחר.`
+        : `השראה למטבח (חופשי): ${randI(GEN_CUISINES)}`;
       const nonCuisineFilters = intent.filters.filter(f => !CUISINE_KW.some(c => f.includes(c)));
       const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
       const aiRes = await anthropic.messages.create({

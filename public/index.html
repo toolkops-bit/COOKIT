@@ -31,9 +31,27 @@
       text-align: center;
       flex-shrink: 0;
       box-shadow: 0 2px 12px rgba(109,40,217,0.3);
+      position: relative;
     }
     header h1 { font-size: 22px; font-weight: 800; }
     header p  { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+    #btnVoiceToggle {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 50%;
+      width: 36px; height: 36px;
+      font-size: 17px;
+      cursor: pointer;
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    #btnVoiceToggle:hover { background: rgba(255,255,255,0.3); }
+    #btnVoiceToggle.on { background: rgba(255,255,255,0.35); }
 
     /* CHAT AREA */
     #chatArea {
@@ -310,6 +328,7 @@
 <header>
   <h1>🍳 Cookit</h1>
   <p>עוזר הבישול החכם שלך</p>
+  <button id="btnVoiceToggle" onclick="toggleVoiceMode()" title="הפעל/כבה קול">🔇</button>
 </header>
 
 <div id="chatArea">
@@ -368,6 +387,7 @@
   let lastIngredients = [];
   let _ttsAudio = null;
   let pendingModeChoiceId = null;
+  let voiceEnabled = false;
 
   document.getElementById('msgInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sendMessage();
@@ -386,13 +406,15 @@
 
     // תגובה קולית/טקסטואלית לשאלת בחירת מצב פתוחה
     if (pendingModeChoiceId) {
-      const wantsAI = /שף|ai|AI|מקורי|כן|יצירת|אני רוצה שף/.test(text);
-      const wantsSearch = /אינטרנט|חיפוש|חפש|לא|מהרשת|מהאינטרנט/.test(text);
+      const wantsAI = /שף|ai|AI|מקורי|כן|יצירת|תיצור|צור/.test(text);
+      const wantsSearch = /אינטרנט|חיפוש|חפש|מהרשת|מהאינטרנט/.test(text);
       if (wantsAI || wantsSearch) {
         appendMsg('user', text);
         chooseMode(wantsAI ? 'generate' : 'search', pendingModeChoiceId);
         return;
       }
+      // הודעה מורכבת שלא מציינת מצב ברור — נקה pending ותן לזרום רגיל
+      pendingModeChoiceId = null;
     }
 
     const welcome = document.getElementById('welcome');
@@ -405,7 +427,7 @@
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: history.slice(-8) })
+        body: JSON.stringify({ message: text, history: history.slice(-8), lastIngredients: lastIngredients.length > 0 ? lastIngredients : undefined })
       });
       const data = await res.json();
       removeTyping(typingId);
@@ -758,9 +780,16 @@
       .trim();
   }
 
+  function toggleVoiceMode() {
+    voiceEnabled = !voiceEnabled;
+    const btn = document.getElementById('btnVoiceToggle');
+    btn.textContent = voiceEnabled ? '🔊' : '🔇';
+    btn.classList.toggle('on', voiceEnabled);
+  }
+
   // ── AUTO TTS FOR TEXT RESPONSES ──
   async function speakText(text) {
-    if (!text) return;
+    if (!text || !voiceEnabled) return;
     text = cleanForSpeech(text);
     // נסה פלאגין Capacitor
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
