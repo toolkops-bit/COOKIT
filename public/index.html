@@ -491,7 +491,7 @@
       if (data.type === 'use_stream') {
         if (data.ingredients?.length) lastIngredients = data.ingredients;
         showQuickActions();
-        await generateStreaming(data.ingredients, data.filters || [], false, typingId);
+        await generateWithCountdown(data.ingredients, data.filters || [], typingId);
         return;
       }
 
@@ -554,78 +554,32 @@
     if (bubble) bubble.innerHTML = `<span style="font-size:13px;color:#888">${text}</span>`;
   }
 
-  async function generateStreaming(ingredients, filters, strictIngredients, typingId) {
-    let accumulated = '', titleShown = false, isDone = false;
-    let timeLeft = 40;
-
-    updateTypingText(typingId, `⏱ ${timeLeft} שניות... יוצר מתכון`);
+  async function generateWithCountdown(ingredients, filters, typingId) {
+    let t = 30, done = false;
+    updateTypingText(typingId, `⏱ 30 שניות... יוצר מתכון`);
     const timer = setInterval(() => {
-      if (!isDone && !titleShown) {
-        timeLeft = Math.max(1, timeLeft - 1);
-        updateTypingText(typingId, `⏱ ${timeLeft} שניות... יוצר מתכון`);
+      if (!done) {
+        t = Math.max(1, t - 1);
+        updateTypingText(typingId, `⏱ ${t} שניות... יוצר מתכון`);
       }
     }, 1000);
-
-    const finish = (recipe) => {
-      isDone = true;
-      clearInterval(timer);
-      removeTyping(typingId);
-      if (recipe) {
-        appendRecipeBubble(recipe);
-        history.push({ role: 'assistant', content: `יצרתי מתכון: ${recipe.title}` });
-      } else {
-        appendMsg('bot', 'שגיאה ביצירת מתכון, נסה שוב.');
-      }
-    };
-
     try {
-      const response = await fetch(API_BASE + '/api/generate-stream', {
+      const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients, filters, strictIngredients })
+        body: JSON.stringify({ message: `תיצור מתכון`, mode: 'generate', ingredients, filters })
       });
-
-      // Fallback for Android WebViews without streaming support
-      if (!response.body || !response.body.getReader) {
-        const fb = await fetch(API_BASE + '/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: `תיצור מתכון עם ${ingredients.join(', ')}`, mode: 'generate', ingredients, filters })
-        });
-        const d = await fb.json();
-        finish(d?.type === 'recipe' ? d.recipe : null);
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop();
-        for (const line of parts) {
-          if (!line.startsWith('data: ')) continue;
-          let ev;
-          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
-          if (ev.done) { finish(ev.recipe); return; }
-          if (ev.d) {
-            accumulated += ev.d;
-            if (!titleShown) {
-              const tm = accumulated.match(/"title"\s*:\s*"([^"]{4,})"/);
-              if (tm) {
-                titleShown = true;
-                clearInterval(timer);
-                updateTypingText(typingId, `✨ יוצר: ${tm[1]}...`);
-              }
-            }
-          }
-        }
+      const data = await res.json();
+      done = true; clearInterval(timer); removeTyping(typingId);
+      if (data?.type === 'recipe' && data.recipe) {
+        appendRecipeBubble(data.recipe);
+        history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
+      } else {
+        appendMsg('bot', data?.text || 'שגיאה ביצירת מתכון, נסה שוב.');
       }
     } catch {
-      finish(null);
+      done = true; clearInterval(timer); removeTyping(typingId);
+      appendMsg('bot', 'שגיאה בחיבור לשרת.');
     }
   }
 
@@ -758,7 +712,7 @@
     const typingId = appendTyping();
 
     if (mode === 'generate') {
-      await generateStreaming(ingredients, filters, false, typingId);
+      await generateWithCountdown(ingredients, filters, typingId);
       return;
     }
 
@@ -861,7 +815,7 @@
     const typingId = appendTyping();
 
     if (mode === 'generate') {
-      await generateStreaming(lastIngredients, [], false, typingId);
+      await generateWithCountdown(lastIngredients, [], typingId);
       return;
     }
 

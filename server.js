@@ -623,10 +623,6 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
     }
 
     if (effectiveAction === 'generate') {
-      // הפנה לנקודת קצה של streaming (ספירה לאחור + UX טוב יותר)
-      if (!forcedMode) {
-        return res.json({ type: 'use_stream', ingredients: intent.ingredients, filters: intent.filters });
-      }
       const GEN_CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
       const GEN_METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
       const randI = a => a[Math.floor(Math.random()*a.length)];
