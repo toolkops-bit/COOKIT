@@ -242,11 +242,11 @@
     /* INPUT BAR */
     #inputBar {
       background: white;
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-top: 1px solid #e8e0f0;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-shrink: 0;
       width: 100%;
       overflow: hidden;
@@ -297,16 +297,16 @@
       animation: pulse-mic 1s ease-in-out infinite;
     }
     .btn-voice-out {
-      height: 44px;
-      padding: 0 12px;
+      height: 36px;
+      padding: 0 8px;
       background: white;
       color: #8b5cf6;
       border: 2px solid #c4b5fd;
-      border-radius: 22px;
-      font-size: 13px;
+      border-radius: 18px;
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
-      display: flex; align-items: center; gap: 4px;
+      display: flex; align-items: center; gap: 2px;
       font-family: 'Heebo', sans-serif;
       transition: all 0.18s;
       white-space: nowrap;
@@ -427,6 +427,7 @@
 <div id="inputBar">
   <button class="btn-mic" id="btnMic" onclick="toggleVoice()">🎤</button>
   <input type="text" id="msgInput" placeholder="שאל אותי על מתכון..." autocomplete="off" />
+  <button class="btn-voice-out" id="btnVoiceOut" onclick="toggleVoiceMode()">🔇 קול</button>
   <button class="btn-send" onclick="sendMessage()">➤</button>
 </div>
 
