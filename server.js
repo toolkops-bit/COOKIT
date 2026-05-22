@@ -215,7 +215,8 @@ ${lastGeneratedTitle ? `\nחשוב: המתכון האחרון שיצרת היה 
 // קבלת פרטי מתכון מאתר מקור
 app.post('/api/recipe-details', async (req, res) => {
   const { url, title } = req.body;
-  if (!url) return res.status(400).json({ error: 'חסר קישור' });
+  const isEn = req.body.lang === 'en';
+  if (!url) return res.status(400).json({ error: isEn ? 'Missing link' : 'חסר קישור' });
 
   try {
     const aiResponse = await anthropic.messages.create({
@@ -223,10 +224,14 @@ app.post('/api/recipe-details', async (req, res) => {
       max_tokens: 1500,
       messages: [{
         role: 'user',
-        content: `בהתבסס על שם המתכון "${title}" מהאתר ${url}, צור מתכון מלא בעברית עם הוראות הכנה.
+        content: isEn
+          ? `Based on the recipe name "${title}" from ${url}, create a full recipe in English with preparation instructions. Return JSON only:
+        {
+          "title": "Recipe name",`
+          : `בהתבסס על שם המתכון "${title}" מהאתר ${url}, צור מתכון מלא בעברית עם הוראות הכנה.
         החזר JSON בלבד:
         {
-          "title": "שם המתכון",
+          "title": "שם המתכון",`
           "ingredients": ["מרכיב 1 + כמות", "מרכיב 2 + כמות"],
           "instructions": ["שלב 1", "שלב 2"],
           "time": "זמן הכנה",
@@ -433,8 +438,9 @@ app.post('/api/search-more', (req, res) => {
 app.get('/api/tts', async (req, res) => {
   const text = (req.query.text || '').substring(0, 200);
   if (!text) return res.status(400).end();
+  const tl = req.query.lang === 'en' ? 'en' : 'iw';
   try {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=iw&client=tw-ob&ttsspeed=0.9`;
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${tl}&client=tw-ob&ttsspeed=0.9`;
     const r = await axios.get(url, {
       responseType: 'arraybuffer',
       timeout: 8000,
@@ -539,7 +545,9 @@ imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנ�
 // ── CHAT ENDPOINT ──
 app.post('/api/chat', async (req, res) => {
   const { message, history = [] } = req.body;
-  if (!message) return res.status(400).json({ error: 'חסרה הודעה' });
+  const lang = req.body.lang || 'he';
+  const isEn = lang === 'en';
+  if (!message) return res.status(400).json({ error: isEn ? 'Message missing' : 'חסרה הודעה' });
 
   try {
     // שלב 1: זהה כוונה (כולל היסטוריה לטיפול בהמשך שיחה)
@@ -550,7 +558,15 @@ app.post('/api/chat', async (req, res) => {
     const intentRes = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 120,
-      system: `זהה את כוונת המשתמש והחזר JSON בלבד:
+      system: isEn ? `Identify user intent and return JSON only:
+{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
+- search: any request to search the internet / "find" / "look up" / "existing recipes"
+- generate: any request for AI chef / "create" / "make me" / "original recipe"
+- chat: only general cooking questions that are not recipe requests
+ingredients: array of ingredients — if continuation, extract from history
+filters: array of style/diet/cuisine — include cuisines: "italian","greek","turkish","moroccan","asian","french","indian","spanish","mexican","japanese","lebanese","persian","american","mediterranean","argentinian","brazilian","thai","chinese","korean","vietnamese","ethiopian","german","russian" etc. Include diets: "vegan","vegetarian","gluten-free" etc.
+strictIngredients: true only if user said "only with what I have" / "no additions" / "only these ingredients"`
+      : `זהה את כוונת המשתמש והחזר JSON בלבד:
 {"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
 - search: כל בקשה לחיפוש מהאינטרנט / "חפש" / "מה יש באינטרנט" / "מתכונים קיימים" — גם ללא מרכיבים
 - generate: כל בקשה ל"שף AI" / "תיצור" / "מתכון מקורי" — גם ללא מרכיבים
@@ -588,6 +604,10 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
 
     // אם search/generate ללא מרכיבים — בקש מרכיבים
     if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !forcedMode && !continuationMode) {
+      if (isEn) {
+        const modeEn = intent.action === 'search' ? 'search online' : 'create an AI recipe';
+        return res.json({ type: 'text', text: `Sure! Tell me what ingredients you have and I'll ${modeEn} 🥕` });
+      }
       const modeHe = intent.action === 'search' ? 'לחפש באינטרנט' : 'ליצור מתכון שף';
       return res.json({ type: 'text', text: `בשמחה! ספר לי אילו מרכיבים יש לך ואני ${modeHe} 🥕` });
     }
@@ -601,18 +621,24 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
 
     if ((effectiveAction === 'search') && intent.ingredients.length > 0) {
       const filterText = intent.filters.length > 0 ? ` ${intent.filters.join(' ')}` : '';
-      const q = `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`;
+      const q = isEn
+        ? `recipe with ${intent.ingredients.join(' ')}${filterText} cooking instructions`
+        : `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`;
       const searchRes = await axios.post('https://google.serper.dev/search',
-        { q, gl: 'il', hl: 'iw', num: 8 },
+        { q, gl: isEn ? 'us' : 'il', hl: isEn ? 'en' : 'iw', num: 8 },
         { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
       );
       const results = (searchRes.data.organic || []).slice(0, 6);
-      if (results.length === 0) return res.json({ type: 'text', text: 'לא מצאתי מתכונים מתאימים. נסה מרכיבים אחרים או בקש שאייצר מתכון.' });
+      if (results.length === 0) return res.json({ type: 'text', text: isEn ? 'No suitable recipes found. Try different ingredients or ask me to create a recipe.' : 'לא מצאתי מתכונים מתאימים. נסה מרכיבים אחרים או בקש שאייצר מתכון.' });
 
       const aiRes = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 800,
-        system: `אתה עוזר בישול ידידותי. המשתמש חיפש מתכונים עם: ${intent.ingredients.join(', ')}.
+        system: isEn
+          ? `You are a helpful cooking assistant. The user searched for recipes with: ${intent.ingredients.join(', ')}.
+Analyze search results and return JSON only:
+{"recipes":[{"title":"","description":"up to 15 words","dominance":"high|medium|low","source":"","url":""}]}`
+          : `אתה עוזר בישול ידידותי. המשתמש חיפש מתכונים עם: ${intent.ingredients.join(', ')}.
 נתח את תוצאות החיפוש והחזר JSON בלבד:
 {"recipes":[{"title":"","description":"עד 15 מילים","dominance":"גבוה|בינוני|נמוך","source":"","url":""}]}`,
         messages: [{ role: 'user', content: results.map((r,i) => `${i+1}. ${r.title}\n${r.snippet}\n${r.link}`).join('\n\n') }]
@@ -623,27 +649,44 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
     }
 
     if (effectiveAction === 'generate') {
-      const GEN_CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
-      const GEN_METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
+      const GEN_CUISINES = isEn
+        ? ['Italian','Mediterranean','Asian','French','Mexican','Indian','Greek','Moroccan','Modern American','Turkish','Lebanese','Persian','Spanish','Japanese']
+        : ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
+      const GEN_METHODS = isEn
+        ? ['baked','stir-fried','grilled','steamed','slow-cooked','pan-seared']
+        : ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
       const randI = a => a[Math.floor(Math.random()*a.length)];
       const CUISINE_KW = ['איטלקי','יווני','טורקי','מרוקאי','אסייתי','צרפתי','הודי','ספרדי','מקסיקני','יפני','לבנוני','פרסי','ישראלי','ים תיכוני','מזרח תיכוני','תאילנדי','סיני','קוריאני','ארגנטינאי','ברזילאי','אמריקאי','אתיופי','וייטנאמי','אפריקאי','גרמני','פולני','רוסי'];
-      const detectedCuisine = intent.filters.find(f => CUISINE_KW.some(c => f.includes(c)));
-      const cuisineInst = detectedCuisine
-        ? `חובה: המטבח הוא ${detectedCuisine} בלבד — השתמש אך ורק במרכיבים, תבלינים וטכניקות של מטבח זה. אסור לערבב עם מטבח אחר.`
-        : `השראה למטבח (חופשי): ${randI(GEN_CUISINES)}`;
-      const nonCuisineFilters = intent.filters.filter(f => !CUISINE_KW.some(c => f.includes(c)));
-      const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
+      const CUISINE_KW_EN = ['italian','greek','turkish','moroccan','asian','french','indian','spanish','mexican','japanese','lebanese','persian','american','mediterranean','thai','chinese','korean','argentinian','brazilian','ethiopian','vietnamese','african','german','polish','russian'];
+      const detectedCuisine = isEn
+        ? intent.filters.find(f => CUISINE_KW_EN.some(c => f.toLowerCase().includes(c)))
+        : intent.filters.find(f => CUISINE_KW.some(c => f.includes(c)));
+      const cuisineInst = isEn
+        ? (detectedCuisine ? `Required: cuisine must be ${detectedCuisine} only — use only ingredients, spices and techniques from this cuisine.` : `Cuisine inspiration: ${randI(GEN_CUISINES)}`)
+        : (detectedCuisine ? `חובה: המטבח הוא ${detectedCuisine} בלבד — השתמש אך ורק במרכיבים, תבלינים וטכניקות של מטבח זה. אסור לערבב עם מטבח אחר.` : `השראה למטבח (חופשי): ${randI(GEN_CUISINES)}`);
+      const nonCuisineFilters = isEn
+        ? intent.filters.filter(f => !CUISINE_KW_EN.some(c => f.toLowerCase().includes(c)))
+        : intent.filters.filter(f => !CUISINE_KW.some(c => f.includes(c)));
+      const filterInst = nonCuisineFilters.length > 0
+        ? (isEn ? ` Must be: ${nonCuisineFilters.join(', ')}.` : ` חייב להיות: ${nonCuisineFilters.join(', ')}.`)
+        : '';
       const aiRes = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
-        system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
+        system: isEn
+          ? `You are a creative chef. Create an original recipe in English. Return JSON only:
+{"title":"","description":"","servings":"","difficulty":"easy|medium|challenging","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
+imageQuery: 4-7 English words describing the dish — include cooking method + visible ingredients only.`
+          : `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
 {"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
 imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה הזו — כלול את שיטת הבישול (grilled/baked/stir-fried/steamed/fried וכו') + המרכיבים הנראים לעין. אסור להוסיף מרכיבים או שיטות שלא נמצאים במתכון.`,
-        messages: [{ role: 'user', content: `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן בלבד.' : ' הרגש חופשי להוסיף מרכיבים שמשדרגים את המנה.'} ${cuisineInst}, שיטת בישול: ${randI(GEN_METHODS)}.` }]
+        messages: [{ role: 'user', content: isEn
+          ? `Main ingredients: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' Use only these ingredients + spices/oil.' : ' Feel free to add complementary ingredients.'} ${cuisineInst}, cooking method: ${randI(GEN_METHODS)}.`
+          : `מרכיבים עיקריים: ${intent.ingredients.join(', ')}.${filterInst}${intent.strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן בלבד.' : ' הרגש חופשי להוסיף מרכיבים שמשדרגים את המנה.'} ${cuisineInst}, שיטת בישול: ${randI(GEN_METHODS)}.` }]
       });
       const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const recipe = m3 ? JSON.parse(m3[0]) : null;
-      if (!recipe) return res.json({ type: 'text', text: 'שגיאה ביצירת מתכון, נסה שוב.' });
+      if (!recipe) return res.json({ type: 'text', text: isEn ? 'Error creating recipe, please try again.' : 'שגיאה ביצירת מתכון, נסה שוב.' });
       return res.json({ type: 'recipe', recipe });
     }
 
@@ -653,7 +696,9 @@ imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנ�
     const chatRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
-      system: `אתה עוזר בישול ידידותי בעברית. ענה בשפה פשוטה ומדוברת, כאילו אתה מדבר עם חבר — בלי כוכביות, בלי כותרות, בלי רשימות ממוספרות, בלי סימני מיוחדים. דבר בעברית רגילה וזורמת. אם מבקשים מתכון — בקש מרכיבים.`,
+      system: isEn
+        ? `You are a friendly cooking assistant. Answer in simple conversational English — no asterisks, no headers, no numbered lists, no special symbols. If asked for a recipe, ask what ingredients they have.`
+        : `אתה עוזר בישול ידידותי בעברית. ענה בשפה פשוטה ומדוברת, כאילו אתה מדבר עם חבר — בלי כוכביות, בלי כותרות, בלי רשימות ממוספרות, בלי סימני מיוחדים. דבר בעברית רגילה וזורמת. אם מבקשים מתכון — בקש מרכיבים.`,
       messages: msgs
     });
     return res.json({ type: 'text', text: chatRes.content[0].text });

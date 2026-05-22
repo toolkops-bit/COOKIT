@@ -53,6 +53,22 @@
     }
     #btnVoiceToggle:hover { background: rgba(255,255,255,0.3); }
     #btnVoiceToggle.on { background: rgba(255,255,255,0.35); }
+    #btnLang {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      font-family: 'Heebo', sans-serif;
+    }
+    #btnLang:hover { background: rgba(255,255,255,0.3); }
 
     /* VOICE BAR */
     #voiceBar {
@@ -383,8 +399,9 @@
 
 <header>
   <h1>🍳 Cookit</h1>
-  <p>עוזר הבישול החכם שלך</p>
+  <p id="headerSubtitle">עוזר הבישול החכם שלך</p>
   <button id="btnVoiceToggle" onclick="toggleVoiceMode()" title="הפעל/כבה קול">🔇</button>
+  <button id="btnLang" onclick="toggleLang()">🌐 EN</button>
 </header>
 
 <div id="voiceBar">
@@ -444,6 +461,103 @@
     ? 'https://cookit-production.up.railway.app'
     : '';
 
+  // ── LANGUAGE ──
+  let appLang = localStorage.getItem('cookit_lang') ||
+    (navigator.language.startsWith('he') || navigator.language.startsWith('iw') ? 'he' : 'en');
+
+  const T = {
+    he: {
+      subtitle: 'עוזר הבישול החכם שלך',
+      welcome_h2: 'שלום! מה נבשל היום?',
+      welcome_p: 'כתוב לי מה יש לך במקרר, ואני אמצא מתכון<br>— כתוב או דבר בקול 🎤',
+      search_title: 'חיפוש מהאינטרנט', search_desc: 'מתכונים אמיתיים מאתרי בישול',
+      search_chip_msg: 'תחפש מתכונים עם עוף ואורז',
+      ai_title: 'שף AI', ai_desc: 'מתכון מקורי שנוצר במיוחד בשבילך',
+      ai_chip_msg: 'תיצור לי מתכון מקורי עם עוף ואורז',
+      chips: [['🍗 עוף ואורז','תחפש מתכונים עם עוף ואורז'],['🌱 טבעוני מהיר','תיצור מתכון טבעוני מהיר'],['🕯️ ארוחה רומנטית','רעיון לארוחת ערב רומנטית'],['🥚 ביצים וגבינה','תיצור מתכון עם ביצים וגבינה'],['🎂 עוגה לשבת','תחפש עוגה פשוטה לשבת']],
+      btn_search: '🔍 חפש באינטרנט', btn_ai: '✨ שף AI', btn_clear: '🗑️ נקה',
+      placeholder: 'שאל אותי על מתכון...',
+      voice_hint: '🎤 מאזין... דבר עכשיו',
+      lang_btn: '🌐 EN',
+      found_recipes: (n, ings) => `מצאתי ${n} מתכונים עם ${ings.join(', ')} 🔍`,
+      dom_high: 'מרכיב ראשי', dom_mid: 'מרכיב בינוני',
+      ingredients_h: 'מרכיבים:', instructions_h: 'הוראות:',
+      chef_tip: 'טיפ השף', speak_btn: '🔊 קרא בקול', wa_btn: 'שלח ל-WhatsApp',
+      mode_question: (ings) => `מצאתי מרכיבים: <strong>${ings.join(', ')}</strong><br>האם תרצה לנסות מתכון השף? (אמור "כן" לשף AI או "חיפוש" לאינטרנט)`,
+      mode_search_btn: '🔍 מתכון מהאינטרנט', mode_ai_btn: '✨ שף AI',
+      mode_speak: (ings) => `מצאתי מרכיבים: ${ings.join(', ')}. האם תרצה לנסות מתכון השף?`,
+      choose_search: '🔍 חיפוש מהאינטרנט', choose_ai: '✨ שף AI',
+      countdown: (t) => `⏱ ${t} שניות... יוצר מתכון`,
+      err_server: 'שגיאה בחיבור לשרת, נסה שוב.',
+      err_recipe: 'שגיאה ביצירת מתכון, נסה שוב.',
+      err_load: 'לא הצלחתי לטעון את המתכון.',
+      err_unknown: 'לא הצלחתי להבין, נסה שוב.',
+      err_generic: 'שגיאה, נסה שוב.',
+    },
+    en: {
+      subtitle: 'Your smart cooking assistant',
+      welcome_h2: 'Hello! What shall we cook today?',
+      welcome_p: 'Tell me what you have in the fridge and I\'ll find a recipe<br>— type or speak 🎤',
+      search_title: 'Search Online', search_desc: 'Real recipes from top cooking sites',
+      search_chip_msg: 'Search recipes with chicken and rice',
+      ai_title: 'AI Chef', ai_desc: 'An original recipe created just for you',
+      ai_chip_msg: 'Create an original recipe with chicken and rice',
+      chips: [['🍗 Chicken & Rice','Search recipes with chicken and rice'],['🌱 Quick Vegan','Create a quick vegan recipe'],['🕯️ Romantic Dinner','Idea for a romantic dinner'],['🥚 Eggs & Cheese','Create a recipe with eggs and cheese'],['🎂 Simple Cake','Search for a simple cake recipe']],
+      btn_search: '🔍 Search Online', btn_ai: '✨ AI Chef', btn_clear: '🗑️ Clear',
+      placeholder: 'Ask me about a recipe...',
+      voice_hint: '🎤 Listening... speak now',
+      lang_btn: '🌐 עב',
+      found_recipes: (n, ings) => `Found ${n} recipes with ${ings.join(', ')} 🔍`,
+      dom_high: 'Main ingredient', dom_mid: 'Supporting ingredient',
+      ingredients_h: 'Ingredients:', instructions_h: 'Instructions:',
+      chef_tip: 'Chef\'s Tip', speak_btn: '🔊 Read Aloud', wa_btn: 'Send via WhatsApp',
+      mode_question: (ings) => `Found ingredients: <strong>${ings.join(', ')}</strong><br>Would you like to try the AI Chef? (say "yes" for AI Chef or "search" for internet)`,
+      mode_search_btn: '🔍 Search Online', mode_ai_btn: '✨ AI Chef',
+      mode_speak: (ings) => `Found ingredients: ${ings.join(', ')}. Would you like to try the AI Chef?`,
+      choose_search: '🔍 Search Online', choose_ai: '✨ AI Chef',
+      countdown: (t) => `⏱ ${t} seconds... creating recipe`,
+      err_server: 'Connection error, please try again.',
+      err_recipe: 'Error creating recipe, please try again.',
+      err_load: 'Could not load the recipe.',
+      err_unknown: 'I didn\'t understand, please try again.',
+      err_generic: 'Error, please try again.',
+    }
+  };
+
+  function toggleLang() {
+    appLang = appLang === 'he' ? 'en' : 'he';
+    localStorage.setItem('cookit_lang', appLang);
+    applyLang();
+  }
+
+  function applyLang() {
+    const t = T[appLang];
+    const isHe = appLang === 'he';
+    document.documentElement.lang = isHe ? 'he' : 'en';
+    document.documentElement.dir = isHe ? 'rtl' : 'ltr';
+    const sub = document.getElementById('headerSubtitle');
+    if (sub) sub.textContent = t.subtitle;
+    const wh2 = document.querySelector('#welcome h2');
+    if (wh2) wh2.textContent = t.welcome_h2;
+    const wp = document.querySelector('#welcome > p');
+    if (wp) wp.innerHTML = t.welcome_p;
+    const cards = document.querySelectorAll('.mode-card');
+    if (cards[0]) { cards[0].querySelector('.mode-title').textContent = t.search_title; cards[0].querySelector('.mode-desc').textContent = t.search_desc; cards[0].onclick = () => sendSuggestion(t.search_chip_msg); }
+    if (cards[1]) { cards[1].querySelector('.mode-title').textContent = t.ai_title; cards[1].querySelector('.mode-desc').textContent = t.ai_desc; cards[1].onclick = () => sendSuggestion(t.ai_chip_msg); }
+    const chips = document.querySelectorAll('.suggestion-chip');
+    chips.forEach((c, i) => { if (t.chips[i]) { c.textContent = t.chips[i][0]; c.onclick = () => sendSuggestion(t.chips[i][1]); } });
+    const qa = document.querySelectorAll('#quickActions .btn-quick');
+    if (qa[0]) qa[0].textContent = t.btn_search;
+    if (qa[1]) qa[1].textContent = t.btn_ai;
+    if (qa[3]) qa[3].textContent = t.btn_clear;
+    const inp = document.getElementById('msgInput');
+    if (inp) inp.placeholder = t.placeholder;
+    const vh = document.getElementById('voiceHint');
+    if (vh) vh.textContent = t.voice_hint;
+    const bl = document.getElementById('btnLang');
+    if (bl) bl.textContent = t.lang_btn;
+  }
+
   let history = [];
   let isSpeaking = false;
   let recognition = null;
@@ -453,6 +567,8 @@
   let _ttsAudio = null;
   let pendingModeChoiceId = null;
   let voiceEnabled = false;
+
+  applyLang();
 
   document.getElementById('msgInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sendMessage();
@@ -492,7 +608,7 @@
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: history.slice(-8), lastIngredients: lastIngredients.length > 0 ? lastIngredients : undefined })
+        body: JSON.stringify({ message: text, history: history.slice(-8), lastIngredients: lastIngredients.length > 0 ? lastIngredients : undefined, lang: appLang })
       });
       const data = await res.json();
 
@@ -513,25 +629,25 @@
         if (data.ingredients?.length) lastIngredients = data.ingredients;
         showQuickActions();
         appendModeChoice(data.ingredients, data.filters || []);
-        history.push({ role: 'assistant', content: `שאלתי איזה סוג מתכון עם ${data.ingredients.join(', ')}` });
+        history.push({ role: 'assistant', content: T[appLang].mode_speak(data.ingredients) });
       } else if (data.type === 'recipes') {
         if (data.ingredients?.length) lastIngredients = data.ingredients;
         showQuickActions();
         appendSearchResults(data.recipes, data.ingredients);
-        history.push({ role: 'assistant', content: `מצאתי ${data.recipes.length} מתכונים עם ${data.ingredients.join(', ')}` });
+        history.push({ role: 'assistant', content: T[appLang].found_recipes(data.recipes.length, data.ingredients) });
       } else if (data.type === 'recipe') {
         showQuickActions();
         appendRecipeBubble(data.recipe);
-        history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
+        history.push({ role: 'assistant', content: `${appLang === 'en' ? 'Created recipe' : 'יצרתי מתכון'}: ${data.recipe.title}` });
       } else {
-        const txt = data.text || data.error || 'לא הצלחתי להבין, נסה שוב.';
+        const txt = data.text || data.error || T[appLang].err_unknown;
         appendMsg('bot', txt);
         speakText(txt);
         history.push({ role: 'assistant', content: txt });
       }
     } catch {
       removeTyping(typingId);
-      appendMsg('bot', 'שגיאה בחיבור לשרת, נסה שוב.');
+      appendMsg('bot', T[appLang].err_server);
     }
   }
 
@@ -567,31 +683,29 @@
   }
 
   async function generateWithCountdown(ingredients, filters, typingId) {
+    const t0 = T[appLang];
     let t = 40, done = false;
-    updateTypingText(typingId, `⏱ 40 שניות... יוצר מתכון`);
+    updateTypingText(typingId, t0.countdown(40));
     const timer = setInterval(() => {
-      if (!done) {
-        t = Math.max(1, t - 1);
-        updateTypingText(typingId, `⏱ ${t} שניות... יוצר מתכון`);
-      }
+      if (!done) { t = Math.max(1, t - 1); updateTypingText(typingId, t0.countdown(t)); }
     }, 1000);
     try {
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `תיצור מתכון`, mode: 'generate', ingredients, filters })
+        body: JSON.stringify({ message: appLang === 'en' ? 'create a recipe' : 'תיצור מתכון', mode: 'generate', ingredients, filters, lang: appLang })
       });
       const data = await res.json();
       done = true; clearInterval(timer); removeTyping(typingId);
       if (data?.type === 'recipe' && data.recipe) {
         appendRecipeBubble(data.recipe);
-        history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
+        history.push({ role: 'assistant', content: `${appLang === 'en' ? 'Created recipe' : 'יצרתי מתכון'}: ${data.recipe.title}` });
       } else {
-        appendMsg('bot', data?.text || 'שגיאה ביצירת מתכון, נסה שוב.');
+        appendMsg('bot', data?.text || t0.err_recipe);
       }
     } catch {
       done = true; clearInterval(timer); removeTyping(typingId);
-      appendMsg('bot', 'שגיאה בחיבור לשרת.');
+      appendMsg('bot', T[appLang].err_server);
     }
   }
 
@@ -599,10 +713,13 @@
     const chat = document.getElementById('chatArea');
     const div = document.createElement('div');
     div.className = 'msg bot';
+    const t = T[appLang];
 
     const items = recipes.map(r => {
-      const dom = r.dominance === 'גבוה' ? `<span class="dom-badge dom-high">מרכיב ראשי</span>` :
-                  r.dominance === 'בינוני' ? `<span class="dom-badge dom-mid">מרכיב בינוני</span>` : '';
+      const isHigh = r.dominance === 'גבוה' || r.dominance === 'high';
+      const isMid  = r.dominance === 'בינוני' || r.dominance === 'medium';
+      const dom = isHigh ? `<span class="dom-badge dom-high">${t.dom_high}</span>` :
+                  isMid  ? `<span class="dom-badge dom-mid">${t.dom_mid}</span>` : '';
       return `<div class="result-item" onclick="loadRecipe('${encodeURIComponent(r.url)}','${r.title.replace(/'/g,"\\'")}')">
         <h4>${r.title}${dom}</h4>
         <p>${r.description || ''}</p>
@@ -612,7 +729,7 @@
 
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="results-bubble">
-        <div class="results-bubble-header">מצאתי ${recipes.length} מתכונים עם ${ingredients.join(', ')} 🔍</div>
+        <div class="results-bubble-header">${t.found_recipes(recipes.length, ingredients)}</div>
         ${items}
       </div>`;
     chat.appendChild(div);
@@ -626,7 +743,7 @@
       const res = await fetch(API_BASE + '/api/recipe-details', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, title })
+        body: JSON.stringify({ url, title, lang: appLang })
       });
       const recipe = await res.json();
       removeTyping(typingId);
@@ -634,7 +751,7 @@
       appendRecipeBubble(recipe);
     } catch {
       removeTyping(typingId);
-      appendMsg('bot', 'לא הצלחתי לטעון את המתכון.');
+      appendMsg('bot', T[appLang].err_load);
     }
   }
 
@@ -662,19 +779,19 @@
           onerror="this.style.display='none'">
         ${metaChips ? `<div class="recipe-meta-row">${metaChips}</div>` : ''}
         <div class="recipe-section">
-          <h4>מרכיבים:</h4>
+          <h4>${T[appLang].ingredients_h}</h4>
           <ul>${(recipe.ingredients||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
         </div>
         <div class="recipe-section">
-          <h4>הוראות:</h4>
+          <h4>${T[appLang].instructions_h}</h4>
           <ol>${(recipe.instructions||[]).map(s=>`<li>${s}</li>`).join('')}</ol>
         </div>
-        ${recipe.chef_tip ? `<div class="chef-tip-box">👨‍🍳 <strong>טיפ השף:</strong> ${recipe.chef_tip}</div>` : ''}
+        ${recipe.chef_tip ? `<div class="chef-tip-box">👨‍🍳 <strong>${T[appLang].chef_tip}:</strong> ${recipe.chef_tip}</div>` : ''}
         <div class="recipe-actions">
-          <button class="btn-speak-recipe" id="speak-${id}" onclick="toggleSpeak('${id}')">🔊 קרא בקול</button>
+          <button class="btn-speak-recipe" id="speak-${id}" onclick="toggleSpeak('${id}')">${T[appLang].speak_btn}</button>
           <button class="btn-wa" onclick="shareWhatsApp('${id}')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            שלח ל-WhatsApp
+            ${T[appLang].wa_btn}
           </button>
         </div>
       </div>`;
@@ -698,13 +815,14 @@
     div.className = 'msg bot';
     const id = 'mode-' + Date.now();
     _modeChoices[id] = { ingredients, filters };
-    const question = `מצאתי מרכיבים: ${ingredients.join(', ')}. האם תרצה לנסות מתכון השף?`;
+    const t = T[appLang];
+    const question = t.mode_speak(ingredients);
     div.innerHTML = `<div class="avatar">🍳</div>
       <div class="bubble mode-choice-bubble" id="${id}">
-        <div style="margin-bottom:12px">מצאתי מרכיבים: <strong>${ingredients.join(', ')}</strong><br>האם תרצה לנסות מתכון השף? (אמור "כן" לשף AI או "חיפוש" לאינטרנט)</div>
+        <div style="margin-bottom:12px">${t.mode_question(ingredients)}</div>
         <div style="display:flex;gap:8px">
-          <button class="btn-mode-choice" onclick="chooseMode('search','${id}')">🔍 מתכון מהאינטרנט</button>
-          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${id}')">✨ שף AI</button>
+          <button class="btn-mode-choice" onclick="chooseMode('search','${id}')">${t.mode_search_btn}</button>
+          <button class="btn-mode-choice ai" onclick="chooseMode('generate','${id}')">${t.mode_ai_btn}</button>
         </div>
       </div>`;
     chat.appendChild(div);
@@ -719,7 +837,7 @@
     pendingModeChoiceId = null;
     document.querySelectorAll(`#${choiceId} .btn-mode-choice`).forEach(b => b.disabled = true);
 
-    const label = mode === 'search' ? '🔍 חיפוש מהאינטרנט' : '✨ שף AI';
+    const label = mode === 'search' ? T[appLang].choose_search : T[appLang].choose_ai;
     appendMsg('user', label);
     const typingId = appendTyping();
 
@@ -732,18 +850,18 @@
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `תמצא מתכון עם ${ingredients.join(', ')}`, mode, ingredients, filters, history: history.slice(-8) })
+        body: JSON.stringify({ message: appLang === 'en' ? `find a recipe with ${ingredients.join(', ')}` : `תמצא מתכון עם ${ingredients.join(', ')}`, mode, ingredients, filters, history: history.slice(-8), lang: appLang })
       });
       const data = await res.json();
       removeTyping(typingId);
       if (data.type === 'recipes') {
         appendSearchResults(data.recipes, data.ingredients || ingredients);
       } else {
-        appendMsg('bot', data.text || data.error || 'שגיאה, נסה שוב.');
+        appendMsg('bot', data.text || data.error || T[appLang].err_generic);
       }
     } catch {
       removeTyping(typingId);
-      appendMsg('bot', 'שגיאה, נסה שוב.');
+      appendMsg('bot', T[appLang].err_generic);
     }
   }
 
@@ -777,7 +895,7 @@
       if (!used) {
         try {
           if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
-          _ttsAudio = new Audio(API_BASE + '/api/tts?text=' + encodeURIComponent(text.substring(0, 200)));
+          _ttsAudio = new Audio(API_BASE + '/api/tts?text=' + encodeURIComponent(text.substring(0, 200)) + '&lang=' + appLang);
           await _ttsAudio.play();
         } catch {}
       }
@@ -931,7 +1049,7 @@
       // fallback: אודיו מהשרת דרך Google TTS
       try {
         if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
-        _ttsAudio = new Audio(API_BASE + '/api/tts?text=' + encodeURIComponent(text.substring(0, 200)));
+        _ttsAudio = new Audio(API_BASE + '/api/tts?text=' + encodeURIComponent(text.substring(0, 200)) + '&lang=' + appLang);
         await _ttsAudio.play();
         return;
       } catch {}
