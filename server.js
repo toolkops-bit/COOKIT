@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const Anthropic = require('@anthropic-ai/sdk');
+const rateLimit = require('express-rate-limit');
 const { getPricesForQuery, upsertPrice, logScrape, searchGovPrices, searchGovPricesMulti } = require('./price-db');
 
 const scrapers = {};
@@ -15,9 +16,55 @@ const PLAYWRIGHT_CHAINS = ['tivtaam', 'keshet-teamim', 'freshmarket'];
 const GOV_CHAINS = new Set(['shufersal', 'victory', 'hazi-hinam']);
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  'https://cookit-production.up.railway.app',
+  'http://localhost:3000',
+  'capacitor://localhost',
+  'http://localhost',
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    // בקשות בלי origin (APK native, curl) — מותרות
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  }
+}));
+
+// ── RATE LIMITING ─────────────────────────────────────────────────────────────
+// כללי: 60 בקשות לדקה לכל IP
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'יותר מדי בקשות, נסה שוב עוד דקה.' }
+});
+
+// API: 15 בקשות לדקה (מגן על עלויות Claude/Serper)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'הגעת למגבלת הבקשות. המתן דקה ונסה שוב.' }
+});
+
+app.use(globalLimiter);
+app.use('/api', apiLimiter);
+
+app.use(express.json({ limit: '50kb' }));  // מגביל גודל body
 app.use(express.static('public'));
+
+// ── INPUT VALIDATION ─────────────────────────────────────────────────────────
+app.use('/api/chat', (req, res, next) => {
+  const msg = req.body?.message;
+  if (msg && typeof msg === 'string' && msg.length > 500) {
+    return res.status(400).json({ error: 'ההודעה ארוכה מדי.' });
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
