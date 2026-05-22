@@ -476,6 +476,64 @@ app.get('/api/food-image', async (req, res) => {
   }
 });
 
+// ── STREAMING GENERATE ──
+app.post('/api/generate-stream', async (req, res) => {
+  const { ingredients, filters, strictIngredients } = req.body;
+  if (!ingredients?.length) return res.status(400).json({ error: 'נא לשלוח מרכיבים' });
+
+  const GEN_CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
+  const GEN_METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
+  const randI = a => a[Math.floor(Math.random()*a.length)];
+  const CKW = ['איטלקי','יווני','טורקי','מרוקאי','אסייתי','צרפתי','הודי','ספרדי','מקסיקני','יפני','לבנוני','פרסי','ישראלי','ים תיכוני','מזרח תיכוני','תאילנדי','סיני','קוריאני','ארגנטינאי','ברזילאי','אמריקאי','אתיופי','וייטנאמי','אפריקאי','גרמני','פולני','רוסי'];
+
+  const filtersArr = Array.isArray(filters) ? filters : (filters ? [filters] : []);
+  const detectedCuisine = filtersArr.find(f => CKW.some(c => f.includes(c)));
+  const cuisineInst = detectedCuisine
+    ? `חובה: המטבח הוא ${detectedCuisine} בלבד — השתמש אך ורק במרכיבים, תבלינים וטכניקות של מטבח זה. אסור לערבב עם מטבח אחר.`
+    : `השראה למטבח (חופשי): ${randI(GEN_CUISINES)}`;
+  const nonCuisineFilters = filtersArr.filter(f => !CKW.some(c => f.includes(c)));
+  const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  try {
+    const stream = anthropic.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: `אתה שף יצירתי. צור מתכון מקורי בעברית. החזר JSON בלבד:
+{"title":"","description":"","servings":"","difficulty":"קל|בינוני|מאתגר","prep_time":"","cook_time":"","total_time":"","ingredients":[],"instructions":[],"chef_tip":"","imageQuery":""}
+imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה — שיטת הבישול + מרכיבים נראים לעין בלבד.`,
+      messages: [{ role: 'user', content: `מרכיבים: ${ingredients.join(', ')}.${filterInst}${strictIngredients ? ' השתמש רק במרכיבים אלה + תבלינים/שמן.' : ''} ${cuisineInst}, שיטת בישול: ${randI(GEN_METHODS)}.` }]
+    });
+
+    let full = '';
+    stream.on('text', t => {
+      full += t;
+      res.write(`data: ${JSON.stringify({ d: t })}\n\n`);
+    });
+    stream.on('finalMessage', () => {
+      try {
+        const m = full.match(/\{[\s\S]*\}/);
+        const recipe = m ? JSON.parse(m[0]) : null;
+        res.write(`data: ${JSON.stringify({ done: true, recipe })}\n\n`);
+      } catch {
+        res.write(`data: ${JSON.stringify({ done: true, recipe: null })}\n\n`);
+      }
+      res.end();
+    });
+    stream.on('error', () => {
+      res.write(`data: ${JSON.stringify({ done: true, recipe: null })}\n\n`);
+      res.end();
+    });
+  } catch (err) {
+    console.error('Stream error:', err.message);
+    res.write(`data: ${JSON.stringify({ done: true, recipe: null })}\n\n`);
+    res.end();
+  }
+});
+
 // ── CHAT ENDPOINT ──
 app.post('/api/chat', async (req, res) => {
   const { message, history = [] } = req.body;

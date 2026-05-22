@@ -486,6 +486,60 @@
   }
   function removeTyping(id) { document.getElementById(id)?.remove(); }
 
+  function updateTypingText(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const bubble = el.querySelector('.bubble');
+    if (bubble) bubble.innerHTML = `<span style="font-size:13px;color:#888">${text}</span>`;
+  }
+
+  async function generateStreaming(ingredients, filters, strictIngredients, typingId) {
+    let accumulated = '', titleShown = false;
+    try {
+      const response = await fetch(API_BASE + '/api/generate-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients, filters, strictIngredients })
+      });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let ev;
+          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+          if (ev.done) {
+            removeTyping(typingId);
+            if (ev.recipe) {
+              appendRecipeBubble(ev.recipe);
+              history.push({ role: 'assistant', content: `יצרתי מתכון: ${ev.recipe.title}` });
+            } else {
+              appendMsg('bot', 'שגיאה ביצירת מתכון, נסה שוב.');
+            }
+            return;
+          }
+          if (ev.d) {
+            accumulated += ev.d;
+            if (!titleShown) {
+              const tm = accumulated.match(/"title"\s*:\s*"([^"]{4,})"/);
+              if (tm) { updateTypingText(typingId, `✨ יוצר: ${tm[1]}...`); titleShown = true; }
+            }
+          }
+        }
+      }
+    } catch {
+      removeTyping(typingId);
+      appendMsg('bot', 'שגיאה בחיבור לשרת.');
+    }
+  }
+
   function appendSearchResults(recipes, ingredients) {
     const chat = document.getElementById('chatArea');
     const div = document.createElement('div');
@@ -614,6 +668,11 @@
     appendMsg('user', label);
     const typingId = appendTyping();
 
+    if (mode === 'generate') {
+      await generateStreaming(ingredients, filters, false, typingId);
+      return;
+    }
+
     try {
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
@@ -624,8 +683,6 @@
       removeTyping(typingId);
       if (data.type === 'recipes') {
         appendSearchResults(data.recipes, data.ingredients || ingredients);
-      } else if (data.type === 'recipe') {
-        appendRecipeBubble(data.recipe);
       } else {
         appendMsg('bot', data.text || data.error || 'שגיאה, נסה שוב.');
       }
@@ -713,6 +770,12 @@
     const label = mode === 'search' ? '🔍 חפש באינטרנט' : '✨ שף AI';
     appendMsg('user', label);
     const typingId = appendTyping();
+
+    if (mode === 'generate') {
+      await generateStreaming(lastIngredients, [], false, typingId);
+      return;
+    }
+
     try {
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
@@ -724,9 +787,6 @@
       if (data.type === 'recipes') {
         appendSearchResults(data.recipes, data.ingredients || lastIngredients);
         history.push({ role: 'assistant', content: `מצאתי מתכונים עם ${lastIngredients.join(', ')}` });
-      } else if (data.type === 'recipe') {
-        appendRecipeBubble(data.recipe);
-        history.push({ role: 'assistant', content: `יצרתי מתכון: ${data.recipe.title}` });
       } else {
         appendMsg('bot', data.text || data.error || 'שגיאה, נסה שוב.');
       }
