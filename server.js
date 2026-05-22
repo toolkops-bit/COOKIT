@@ -495,8 +495,10 @@ app.post('/api/generate-stream', async (req, res) => {
   const filterInst = nonCuisineFilters.length > 0 ? ` חייב להיות: ${nonCuisineFilters.join(', ')}.` : '';
 
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
 
   try {
     const stream = anthropic.messages.stream({
@@ -621,6 +623,10 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
     }
 
     if (effectiveAction === 'generate') {
+      // הפנה לנקודת קצה של streaming (ספירה לאחור + UX טוב יותר)
+      if (!forcedMode) {
+        return res.json({ type: 'use_stream', ingredients: intent.ingredients, filters: intent.filters });
+      }
       const GEN_CUISINES = ['איטלקי','מזרח תיכוני','אסייתי','צרפתי','מקסיקני','הודי','יווני','מרוקאי','ישראלי מודרני','טורקי','לבנוני','פרסי','ספרדי','יפני'];
       const GEN_METHODS  = ['בתנור','מוקפץ','על הגריל','מאודה','מבושל לאט','על מחבת'];
       const randI = a => a[Math.floor(Math.random()*a.length)];
