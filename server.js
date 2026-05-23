@@ -470,10 +470,10 @@ continuation: true אם המשתמש מבקש "עוד אחד", "אחר", "שונ
     if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !forcedMode && !continuationMode) {
       if (isEn) {
         const modeEn = intent.action === 'search' ? 'search online' : 'create an AI recipe';
-        return res.json({ type: 'text', text: `Sure! Tell me what ingredients you have and I'll ${modeEn} 🥕` });
+        return res.json({ type: 'text', text: `Sure! Tell me what ingredients you have and I'll ${modeEn}.` });
       }
       const modeHe = intent.action === 'search' ? 'לחפש באינטרנט' : 'ליצור מתכון שף';
-      return res.json({ type: 'text', text: `בשמחה! ספר לי אילו מרכיבים יש לך ואני ${modeHe} 🥕` });
+      return res.json({ type: 'text', text: `בשמחה! ספר לי אילו מרכיבים יש לך ואני ${modeHe}.` });
     }
 
     // אם יש מרכיבים ולא נבחר מצב — שאל קודם
