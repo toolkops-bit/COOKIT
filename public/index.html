@@ -515,6 +515,18 @@
       more_header: '📱 מקורות נוספים',
       loading_more: 'מחפש...',
       no_more: 'לא נמצאו מקורות נוספים',
+      speak_stop: '⏹ עצור',
+      voice_on: '🔊 קול פעיל', voice_off: '🔇 קול כבוי', voice_short: '🔊 קול',
+      no_fridge: 'ספר לי קודם מה יש לך במקרר 🥕',
+      err_voice_unavail: 'זיהוי קול לא זמין במכשיר זה.',
+      err_voice_unsupport: 'זיהוי קול לא נתמך במכשיר זה.',
+      err_voice_perm: 'יש לאשר הרשאת מיקרופון בהגדרות האפליקציה.',
+      err_voice_fail: 'לא הצלחתי לשמוע, נסה שוב',
+      err_voice_mic: 'שגיאה במיקרופון, נסה שוב',
+      err_browser_voice: 'הדפדפן לא תומך בזיהוי קול. נסה Chrome.',
+      wa_ingredients: '*מרכיבים:*', wa_instructions: '*הוראות:*',
+      wa_chef_tip: (tip) => `\n👨‍🍳 *טיפ השף:* ${tip}`, wa_footer: '\n_נשלח מ-Cookit 🍳_',
+      speak_ingredients: 'מרכיבים', speak_instructions: 'הוראות הכנה',
     },
     en: {
       subtitle: 'Your smart cooking assistant',
@@ -547,6 +559,18 @@
       more_header: '📱 More sources',
       loading_more: 'Searching...',
       no_more: 'No additional sources found',
+      speak_stop: '⏹ Stop',
+      voice_on: '🔊 Voice on', voice_off: '🔇 Voice off', voice_short: '🔊 Voice',
+      no_fridge: "Tell me what's in your fridge first 🥕",
+      err_voice_unavail: 'Voice recognition not available on this device.',
+      err_voice_unsupport: 'Voice recognition not supported on this device.',
+      err_voice_perm: 'Please allow microphone access in app settings.',
+      err_voice_fail: "Couldn't hear you, try again",
+      err_voice_mic: 'Microphone error, try again',
+      err_browser_voice: "Browser doesn't support voice recognition. Try Chrome.",
+      wa_ingredients: '*Ingredients:*', wa_instructions: '*Instructions:*',
+      wa_chef_tip: (tip) => `\n👨‍🍳 *Chef's Tip:* ${tip}`, wa_footer: '\n_Sent from Cookit 🍳_',
+      speak_ingredients: 'Ingredients', speak_instructions: 'Instructions',
     }
   };
 
@@ -614,8 +638,8 @@
 
     // תגובה קולית/טקסטואלית לשאלת בחירת מצב פתוחה
     if (pendingModeChoiceId) {
-      const wantsAI = /שף|ai|AI|מקורי|כן|יצירת|תיצור|צור/.test(text);
-      const wantsSearch = /אינטרנט|חיפוש|חפש|מהרשת|מהאינטרנט/.test(text);
+      const wantsAI = /שף|מקורי|כן|יצירת|תיצור|צור|\byes\b|\bai\b|\bchef\b|\bcreate\b|\boriginal\b/i.test(text);
+      const wantsSearch = /אינטרנט|חיפוש|חפש|מהרשת|מהאינטרנט|\bsearch\b|\bonline\b|\binternet\b|\bfind\b/i.test(text);
       if (wantsAI || wantsSearch) {
         appendMsg('user', text);
         chooseMode(wantsAI ? 'generate' : 'search', pendingModeChoiceId);
@@ -664,6 +688,7 @@
         history.push({ role: 'assistant', content: T[appLang].found_recipes(data.recipes.length, data.ingredients) });
       } else if (data.type === 'recipe') {
         showQuickActions();
+        if (data.preamble) { appendMsg('bot', data.preamble); history.push({ role: 'assistant', content: data.preamble }); }
         appendRecipeBubble(data.recipe);
         history.push({ role: 'assistant', content: `${appLang === 'en' ? 'Created recipe' : 'יצרתי מתכון'}: ${data.recipe.title}` });
       } else {
@@ -725,6 +750,7 @@
       const data = await res.json();
       done = true; clearInterval(timer); removeTyping(typingId);
       if (data?.type === 'recipe' && data.recipe) {
+        if (data.preamble) { appendMsg('bot', data.preamble); history.push({ role: 'assistant', content: data.preamble }); }
         appendRecipeBubble(data.recipe);
         history.push({ role: 'assistant', content: `${appLang === 'en' ? 'Created recipe' : 'יצרתי מתכון'}: ${data.recipe.title}` });
       } else {
@@ -956,15 +982,17 @@
       return;
     }
 
-    const text = cleanForSpeech(`${recipe.title}. ${recipe.description||''}. מרכיבים: ${(recipe.ingredients||[]).join(', ')}. הוראות הכנה: ${(recipe.instructions||[]).join('. ')}`);
+    const t = T[appLang];
+    const ttsLang = appLang === 'en' ? 'en-US' : 'he-IL';
+    const text = cleanForSpeech(`${recipe.title}. ${recipe.description||''}. ${t.speak_ingredients}: ${(recipe.ingredients||[]).join(', ')}. ${t.speak_instructions}: ${(recipe.instructions||[]).join('. ')}`);
 
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       const TTS = window.Capacitor.Plugins.TextToSpeech;
       isSpeaking = true;
-      if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹ עצור'; }
+      if (btn) { btn.classList.add('speaking'); btn.textContent = t.speak_stop; }
       let used = false;
       if (TTS) {
-        try { await TTS.speak({ text, lang: 'he-IL', rate: 0.85, volume: 1.0 }); used = true; } catch {}
+        try { await TTS.speak({ text, lang: ttsLang, rate: 0.85, volume: 1.0 }); used = true; } catch {}
       }
       if (!used) {
         try {
@@ -974,33 +1002,34 @@
         } catch {}
       }
       isSpeaking = false;
-      if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊 קרא בקול'; }
+      if (btn) { btn.classList.remove('speaking'); btn.textContent = t.speak_btn; }
       return;
     }
 
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'he-IL';
+    utt.lang = ttsLang;
     utt.rate = 0.92;
-    utt.onstart = () => { isSpeaking = true; if(btn){btn.classList.add('speaking');btn.textContent='⏹ עצור';} };
-    utt.onend = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent='🔊 קרא בקול';} };
-    utt.onerror = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent='🔊 קרא בקול';} };
+    utt.onstart = () => { isSpeaking = true; if(btn){btn.classList.add('speaking');btn.textContent=t.speak_stop;} };
+    utt.onend = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent=t.speak_btn;} };
+    utt.onerror = () => { isSpeaking = false; if(btn){btn.classList.remove('speaking');btn.textContent=t.speak_btn;} };
     speechSynthesis.speak(utt);
   }
 
   function shareWhatsApp(id) {
     const recipe = _recipes[id];
     if (!recipe) return;
+    const tw = T[appLang];
     const lines = [
       `*${recipe.title}*`,
       recipe.description||'',
       '',
-      '*מרכיבים:*',
+      tw.wa_ingredients,
       ...(recipe.ingredients||[]).map(i=>`• ${i}`),
       '',
-      '*הוראות:*',
+      tw.wa_instructions,
       ...(recipe.instructions||[]).map((s,i)=>`${i+1}. ${s}`),
-      recipe.chef_tip ? `\n👨‍🍳 *טיפ השף:* ${recipe.chef_tip}` : '',
-      '\n_נשלח מ-Cookit 🍳_',
+      recipe.chef_tip ? tw.wa_chef_tip(recipe.chef_tip) : '',
+      tw.wa_footer,
     ].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, '_blank');
   }
@@ -1011,10 +1040,10 @@
 
   async function quickAction(mode) {
     if (lastIngredients.length === 0) {
-      appendMsg('bot', 'ספר לי קודם מה יש לך במקרר 🥕');
+      appendMsg('bot', T[appLang].no_fridge);
       return;
     }
-    const label = mode === 'search' ? '🔍 חפש באינטרנט' : '✨ שף AI';
+    const label = mode === 'search' ? T[appLang].btn_search : T[appLang].btn_ai;
     appendMsg('user', label);
     const typingId = appendTyping();
 
@@ -1027,19 +1056,19 @@
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `תמצא מתכון עם ${lastIngredients.join(', ')}`, mode, ingredients: lastIngredients, history: history.slice(-8) })
+        body: JSON.stringify({ message: appLang === 'en' ? `find a recipe with ${lastIngredients.join(', ')}` : `תמצא מתכון עם ${lastIngredients.join(', ')}`, mode, ingredients: lastIngredients, history: history.slice(-8), lang: appLang })
       });
       const data = await res.json();
       removeTyping(typingId);
       if (data.type === 'recipes') {
         appendSearchResults(data.recipes, data.ingredients || lastIngredients);
-        history.push({ role: 'assistant', content: `מצאתי מתכונים עם ${lastIngredients.join(', ')}` });
+        history.push({ role: 'assistant', content: T[appLang].found_recipes(data.recipes?.length || 0, lastIngredients) });
       } else {
-        appendMsg('bot', data.text || data.error || 'שגיאה, נסה שוב.');
+        appendMsg('bot', data.text || data.error || T[appLang].err_generic);
       }
     } catch {
       removeTyping(typingId);
-      appendMsg('bot', 'שגיאה בחיבור לשרת.');
+      appendMsg('bot', T[appLang].err_server);
     }
   }
 
@@ -1070,9 +1099,8 @@
         <div class="suggestion-chip" onclick="sendSuggestion('תחפש עוגה פשוטה לשבת')">🎂 עוגה לשבת</div>
       </div>
     </div>`;
-    // Restore voice button state after clearChat
-    const qBtn = document.getElementById('btnVoiceQuick');
-    if (qBtn) { qBtn.textContent = voiceEnabled ? '🔊 קול פעיל' : '🔇 קול כבוי'; }
+    applyLang();
+    _syncVoiceButtons();
   }
 
   // ── STRIP MARKDOWN BEFORE TTS ──
@@ -1102,11 +1130,11 @@
     const mBtn = document.getElementById('btnVoiceMain');
     if (hBtn) { hBtn.textContent = on ? '🔊' : '🔇'; hBtn.classList.toggle('on', on); }
     if (qBtn) {
-      qBtn.textContent = on ? '🔊 קול פעיל' : '🔇 קול כבוי';
+      qBtn.textContent = on ? T[appLang].voice_on : T[appLang].voice_off;
       qBtn.style.cssText = on ? 'background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border-color:transparent' : '';
     }
-    if (oBtn) { oBtn.textContent = on ? '🔊 קול' : '🔇 קול'; oBtn.classList.toggle('on', on); }
-    if (mBtn) { mBtn.textContent = on ? 'פעיל 🔊' : 'כבוי 🔇'; mBtn.classList.toggle('on', on); }
+    if (oBtn) { oBtn.textContent = on ? T[appLang].voice_short : T[appLang].voice_short.replace('🔊','🔇'); oBtn.classList.toggle('on', on); }
+    if (mBtn) { mBtn.textContent = on ? T[appLang].voice_on : T[appLang].voice_off; mBtn.classList.toggle('on', on); }
   }
 
   // ── AUTO TTS FOR TEXT RESPONSES ──
@@ -1118,7 +1146,7 @@
       const TTS = window.Capacitor.Plugins.TextToSpeech;
       if (TTS) {
         try { await TTS.stop(); } catch {}
-        try { await TTS.speak({ text: text.substring(0,200), lang: 'he-IL', rate: 0.9, volume: 1.0, category: 'ambient' }); return; } catch {}
+        try { await TTS.speak({ text: text.substring(0,200), lang: appLang === 'en' ? 'en-US' : 'he-IL', rate: 0.9, volume: 1.0, category: 'ambient' }); return; } catch {}
       }
       // fallback: אודיו מהשרת דרך Google TTS
       try {
@@ -1131,7 +1159,7 @@
     if (!window.speechSynthesis) return;
     speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'he-IL';
+    utt.lang = appLang === 'en' ? 'en-US' : 'he-IL';
     utt.rate = 0.95;
     speechSynthesis.speak(utt);
   }
@@ -1141,39 +1169,39 @@
     // Capacitor native path (Android APK)
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       const SR = window.Capacitor.Plugins.SpeechRecognition;
-      if (!SR) { appendMsg('bot', 'זיהוי קול לא זמין במכשיר זה.'); return; }
+      if (!SR) { appendMsg('bot', T[appLang].err_voice_unavail); return; }
 
       if (isListening) { SR.stop(); return; }
 
       try {
         const avail = await SR.available();
-        if (!avail.available) { appendMsg('bot', 'זיהוי קול לא נתמך במכשיר זה.'); return; }
+        if (!avail.available) { appendMsg('bot', T[appLang].err_voice_unsupport); return; }
 
         const perm = await SR.requestPermissions();
         if (perm.speechRecognition !== 'granted') {
-          appendMsg('bot', 'יש לאשר הרשאת מיקרופון בהגדרות האפליקציה.');
+          appendMsg('bot', T[appLang].err_voice_perm);
           return;
         }
 
         isListening = true;
         document.getElementById('btnMic').classList.add('listening');
         const hint = document.getElementById('voiceHint');
-        hint.textContent = '🎤 מאזין... דבר עכשיו';
+        hint.textContent = T[appLang].voice_hint;
         hint.classList.add('visible');
 
-        const result = await SR.start({ language: 'he-IL', maxResults: 1, popup: false, partialResults: false });
+        const result = await SR.start({ language: appLang === 'en' ? 'en-US' : 'he-IL', maxResults: 1, popup: false, partialResults: false });
         const text = result.matches && result.matches[0];
         if (text) {
           document.getElementById('msgInput').value = text;
           hint.classList.remove('visible');
           sendMessage();
         } else {
-          hint.textContent = 'לא הצלחתי לשמוע, נסה שוב';
+          hint.textContent = T[appLang].err_voice_fail;
           setTimeout(() => hint.classList.remove('visible'), 2000);
         }
       } catch (e) {
         const hint = document.getElementById('voiceHint');
-        hint.textContent = 'שגיאה במיקרופון, נסה שוב';
+        hint.textContent = T[appLang].err_voice_mic;
         setTimeout(() => hint.classList.remove('visible'), 2000);
       } finally {
         isListening = false;
@@ -1184,19 +1212,19 @@
 
     // Web browser fallback (Chrome desktop/mobile)
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      appendMsg('bot', 'הדפדפן לא תומך בזיהוי קול. נסה Chrome.');
+      appendMsg('bot', T[appLang].err_browser_voice);
       return;
     }
     if (isListening) { recognition.stop(); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SR();
-    recognition.lang = 'he-IL';
+    recognition.lang = appLang === 'en' ? 'en-US' : 'he-IL';
     recognition.interimResults = false;
     recognition.onstart = () => {
       isListening = true;
       document.getElementById('btnMic').classList.add('listening');
       const hint = document.getElementById('voiceHint');
-      hint.textContent = '🎤 מאזין... דבר עכשיו';
+      hint.textContent = T[appLang].voice_hint;
       hint.classList.add('visible');
     };
     recognition.onresult = (e) => {
@@ -1206,7 +1234,7 @@
       sendMessage();
     };
     recognition.onerror = () => {
-      document.getElementById('voiceHint').textContent = 'לא הצלחתי לשמוע, נסה שוב';
+      document.getElementById('voiceHint').textContent = T[appLang].err_voice_fail;
       setTimeout(() => document.getElementById('voiceHint').classList.remove('visible'), 2000);
     };
     recognition.onend = () => {

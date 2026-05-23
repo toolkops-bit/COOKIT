@@ -416,21 +416,23 @@ app.post('/api/chat', async (req, res) => {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 120,
       system: isEn ? `Identify user intent and return JSON only:
-{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
+{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false,"continuation":false}
 - search: any request to search the internet / "find" / "look up" / "existing recipes"
 - generate: any request for AI chef / "create" / "make me" / "original recipe"
 - chat: only general cooking questions that are not recipe requests
 ingredients: array of ingredients — if continuation, extract from history
 filters: array of style/diet/cuisine — include cuisines: "italian","greek","turkish","moroccan","asian","french","indian","spanish","mexican","japanese","lebanese","persian","american","mediterranean","argentinian","brazilian","thai","chinese","korean","vietnamese","ethiopian","german","russian" etc. Include diets: "vegan","vegetarian","gluten-free" etc.
-strictIngredients: true only if user said "only with what I have" / "no additions" / "only these ingredients"`
+strictIngredients: true only if user said "only with what I have" / "no additions" / "only these ingredients"
+continuation: true if user asks for "another", "different", "new one", "try again", "one more" — reusing same ingredients from context, NOT providing new ones`
       : `זהה את כוונת המשתמש והחזר JSON בלבד:
-{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false}
+{"action":"search"|"generate"|"chat","ingredients":[],"filters":[],"query":"","strictIngredients":false,"continuation":false}
 - search: כל בקשה לחיפוש מהאינטרנט / "חפש" / "מה יש באינטרנט" / "מתכונים קיימים" — גם ללא מרכיבים
 - generate: כל בקשה ל"שף AI" / "תיצור" / "מתכון מקורי" — גם ללא מרכיבים
 - chat: רק שאלות כלליות על בישול שאינן בקשת מתכון
 ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה
 filters: מערך של סגנון/דיאטה/מטבח — כולל מטבחים: "איטלקי","יווני","טורקי","מרוקאי","אסייתי","צרפתי","הודי","ספרדי","מקסיקני","יפני","לבנוני","פרסי","ישראלי","ים תיכוני","ארגנטינאי","ברזילאי","תאילנדי","סיני","קוריאני","וייטנאמי","אתיופי","גרמני","רוסי" וכו'. כלול גם דיאטות: "טבעוני","צמחוני","ללא גלוטן" וכו'
-strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה"`,
+strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה"
+continuation: true אם המשתמש מבקש "עוד אחד", "אחר", "שונה", "נסה שוב", "עוד מתכון" — רוצה לשמור על אותם מרכיבים מהשיחה, לא מספק מרכיבים חדשים`,
       messages: intentMessages
     });
 
@@ -451,12 +453,17 @@ strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש ל�
       intent.filters = forcedFilters || intent.filters;
     }
 
-    // המשך שיחה: הודעה ללא מרכיבים אך יש מרכיבים מהסיבוב הקודם — קפוץ ישירות לפעולה
+    // המשך שיחה: בקשה לעוד מתכון עם אותם מרכיבים
     let continuationMode = null;
-    if (!forcedMode && !forcedIngredients?.length && intent.ingredients.length === 0 &&
-        lastIngredientsHint?.length > 0 && (intent.action === 'generate' || intent.action === 'search')) {
-      intent.ingredients = lastIngredientsHint;
-      continuationMode = intent.action;
+    if (!forcedMode && !forcedIngredients?.length && (intent.action === 'generate' || intent.action === 'search')) {
+      const isContinuation = intent.continuation ||
+        (intent.ingredients.length === 0 && lastIngredientsHint?.length > 0);
+      if (isContinuation) {
+        if (intent.ingredients.length === 0 && lastIngredientsHint?.length > 0) {
+          intent.ingredients = lastIngredientsHint;
+        }
+        continuationMode = intent.action;
+      }
     }
 
     // אם search/generate ללא מרכיבים — בקש מרכיבים
@@ -544,7 +551,10 @@ imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנ�
       const m3 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const recipe = m3 ? JSON.parse(m3[0]) : null;
       if (!recipe) return res.json({ type: 'text', text: isEn ? 'Error creating recipe, please try again.' : 'שגיאה ביצירת מתכון, נסה שוב.' });
-      return res.json({ type: 'recipe', recipe });
+      const PREAMBLES_EN = ["On it! Let me whip up something different for you...", "Sure thing! Cooking up a fresh idea right now...", "You got it! Let me try a completely different angle...", "Of course! One more coming right up..."];
+      const PREAMBLES_HE = ["בסדר! אני מכין לך משהו שונה לגמרי...", "כמובן! רעיון חדש בדרך...", "בשמחה! נסה את זה...", "קדימה, עוד מתכון מגיע..."];
+      const preamble = continuationMode ? (isEn ? PREAMBLES_EN[Math.floor(Math.random()*PREAMBLES_EN.length)] : PREAMBLES_HE[Math.floor(Math.random()*PREAMBLES_HE.length)]) : undefined;
+      return res.json({ type: 'recipe', recipe, preamble });
     }
 
     // chat כללי
@@ -554,8 +564,8 @@ imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנ�
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
       system: isEn
-        ? `You are a friendly cooking assistant. Answer in simple conversational English — no asterisks, no headers, no numbered lists, no special symbols. If asked for a recipe, ask what ingredients they have.`
-        : `אתה עוזר בישול ידידותי בעברית. ענה בשפה פשוטה ומדוברת, כאילו אתה מדבר עם חבר — בלי כוכביות, בלי כותרות, בלי רשימות ממוספרות, בלי סימני מיוחדים. דבר בעברית רגילה וזורמת. אם מבקשים מתכון — בקש מרכיבים.`,
+        ? `You are Cookit, a warm and enthusiastic cooking companion who genuinely loves food and loves helping people cook. Talk like a knowledgeable friend in the kitchen — casual, encouraging, and real. No bullet points, no headers, no asterisks, no numbered lists, no special formatting. Keep it short and natural. If someone asks for a recipe, warmly ask what they've got on hand. If they seem stuck, offer a quick tip or a fun idea.`
+        : `אתה Cookit, עוזר בישול חם ונלהב שאוהב אוכל באמת ואוהב לעזור לאנשים לבשל. דבר כמו חבר בקיא שנמצא איתך במטבח — קליל, מעודד, וטבעי. בלי כוכביות, בלי כותרות, בלי רשימות ממוספרות, בלי סימנים מיוחדים. קצר וזורם. אם מבקשים מתכון — שאל בצורה חמה מה יש להם בבית. אם נראה שהם תקועים — תציע טיפ מהיר או רעיון מגניב.`,
       messages: msgs
     });
     return res.json({ type: 'text', text: chatRes.content[0].text });
