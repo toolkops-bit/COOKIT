@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -30,7 +30,7 @@ const globalLimiter = rateLimit({
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'יותר מדי בקשות, נסה שוב עוד דקה.' }
+  message: { error: 'Too many requests, please try again in a minute.' }
 });
 
 // API: 30 בקשות לדקה לכל IP (מגן על עלויות Claude/Serper)
@@ -39,7 +39,7 @@ const apiLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'הגעת למגבלת הבקשות. המתן דקה ונסה שוב.' }
+  message: { error: 'Rate limit reached. Please wait a minute and try again.' }
 });
 
 app.use(globalLimiter);
@@ -52,7 +52,7 @@ app.use(express.static('public'));
 app.use('/api/chat', (req, res, next) => {
   const msg = req.body?.message;
   if (msg && typeof msg === 'string' && msg.length > 500) {
-    return res.status(400).json({ error: 'ההודעה ארוכה מדי.' });
+    return res.status(400).json({ error: 'Message too long.' });
   }
   next();
 });
@@ -63,154 +63,6 @@ app.use((req, res, next) => {
 });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// חיפוש מתכונים לפי מרכיבים
-app.post('/api/search', async (req, res) => {
-  const { ingredients, filter } = req.body;
-  if (!ingredients || ingredients.length === 0) {
-    return res.status(400).json({ error: 'נא להזין לפחות מרכיב אחד' });
-  }
-
-  const filters = Array.isArray(filter) ? filter : (filter ? [filter] : []);
-  const filterText = filters.length > 0 ? ` ${filters.join(' ')}` : '';
-  const query = `מתכון עם ${ingredients.join(' ')}${filterText} הוראות הכנה`;
-
-  try {
-    const searchResponse = await axios.post(
-      'https://google.serper.dev/search',
-      { q: query, gl: 'il', hl: 'iw', num: 10 },
-      {
-        headers: {
-          'X-API-KEY': process.env.SERPER_API_KEY,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const results = searchResponse.data.organic || [];
-    console.log(`Serper returned ${results.length} results`);
-    if (results.length === 0) {
-      return res.json({ recipes: [], aiGenerated: null });
-    }
-
-    // AI מנתח את התוצאות ומחלץ מתכונים רלוונטיים
-    const resultsText = results.map((r, i) =>
-      `${i + 1}. כותרת: ${r.title}\nתיאור: ${r.snippet}\nקישור: ${r.link}`
-    ).join('\n\n');
-
-    const aiResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
-      system: `אתה עוזר בחיפוש מתכונים. המשתמש חיפש מתכונים עם המרכיבים: ${ingredients.join(', ')}.
-      תפקידך לנתח את תוצאות החיפוש ולהחזיר JSON בלבד עם המתכונים הרלוונטיים ביותר.
-      דרג את המתכונים לפי כמה המרכיבים שחיפשו הם דומיננטיים במתכון.
-      החזר JSON בפורמט הזה בלבד, ללא טקסט נוסף. תיאור לא יעלה על 15 מילים:
-      {
-        "recipes": [
-          {
-            "title": "שם המתכון",
-            "description": "תיאור קצר עד 15 מילים",
-            "dominance": "גבוה/בינוני/נמוך",
-            "source": "שם האתר",
-            "url": "קישור"
-          }
-        ]
-      }`,
-      messages: [{ role: 'user', content: resultsText }]
-    });
-
-    let parsed;
-    try {
-      const text = aiResponse.content[0].text.trim();
-      console.log('AI response:', text.substring(0, 300));
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { recipes: [] };
-      console.log(`Parsed ${parsed.recipes?.length || 0} recipes`);
-    } catch (e) {
-      console.error('Parse error:', e.message);
-      parsed = { recipes: [] };
-    }
-
-    res.json(parsed);
-  } catch (err) {
-    console.error('Search error:', err.message);
-    res.status(500).json({ error: 'שגיאה בחיפוש, נסה שוב' });
-  }
-});
-
-// יצירת מתכון חדש עם AI
-const CUISINES = ['איטלקי', 'מזרח תיכוני', 'אסייתי', 'צרפתי', 'מקסיקני', 'הודי', 'יווני', 'מרוקאי', 'ספרדי', 'ישראלי מודרני', 'יפני', 'לבנוני', 'פרסי', 'טורקי'];
-const METHODS  = ['בתנור', 'מוקפץ', 'על הגריל', 'מאודה', 'קר / ללא בישול', 'מבושל לאט', 'על מחבת', 'אפוי', 'מטוגן עמוק', 'בסיר לחץ'];
-const FORMATS  = ['מנה ראשונה', 'ארוחה עיקרית', 'ממרח / דיפ', 'פאי / קיש', 'כריך גורמה', 'גראטן', 'טרטלט', 'עוגת בשר', 'רולדה', 'סלט חם', 'פסטה', 'ריזוטו', 'קציצות', 'קרפ / בלינץ'];
-const rand = arr => arr[Math.floor(Math.random() * arr.length)];
-let lastGeneratedTitle = null;
-
-app.post('/api/generate', async (req, res) => {
-  const { ingredients, filter } = req.body;
-  if (!ingredients || ingredients.length === 0) {
-    return res.status(400).json({ error: 'נא להזין לפחות מרכיב אחד' });
-  }
-
-  const filters = Array.isArray(filter) ? filter : (filter ? [filter] : []);
-  const filterInstruction = filters.length > 0 ? ` המתכון חייב להיות: ${filters.join(', ')}.` : '';
-
-  const cuisine = rand(CUISINES);
-  const method  = rand(METHODS);
-  const format  = rand(FORMATS);
-
-  try {
-    const aiResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2500,
-      system: `אתה שף יצירתי ברמה עולמית עם ניסיון של 20 שנה במטבחים מובילים.
-תפקידך לייצר מתכונים מקוריים, מפתיעים ומגוונים בעברית.
-
-כללים שאסור לשבור:
-- אסור לייצר מנה זהה או דומה מאוד למה שיצרת בפעם הקודמת
-- גוון בין ארוחות, מרקמים, וטכניקות בישול
-- חשוב מחוץ לקופסה: מה פחות מוכר אבל טעים עם המרכיב?
-- כמויות מדויקות ומציאותיות לכל מרכיב
-- הוראות מפורטות עם זמנים ספציפיים
-- טיפ מקצועי שמשדרג את המתכון
-החזר תמיד JSON בלבד, ללא שום טקסט מחוץ ל-JSON. כלול שדה imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנה שיצרת — כלול את שיטת הבישול (grilled/baked/stir-fried/fried/steamed וכו') ורק מרכיבים שבאמת נמצאים בה (לדוגמה: "baked chicken lemon herb roasted").`,
-      messages: [{
-        role: 'user',
-        content: `צור מתכון מקורי ומפורט בעברית עם המרכיבים: ${ingredients.join(', ')}.${filterInstruction}
-${lastGeneratedTitle ? `\nחשוב: המתכון האחרון שיצרת היה "${lastGeneratedTitle}" — אסור לחזור על אותו סוג מנה. תהיה שונה לחלוטין.\n` : ''}
-השראה לפעם הזאת (אם לא מתנגש עם הפילטרים — השתמש בה, אחרת היה יצירתי בדרכך):
-• מטבח: ${cuisine}
-• שיטת בישול: ${method}
-• סוג המנה: ${format}
-
-החזר JSON בפורמט הזה בלבד:
-{
-  "title": "שם המתכון",
-  "description": "תיאור מפתה של המנה ב-2-3 משפטים",
-  "servings": "מספר מנות (לדוגמה: 4 מנות)",
-  "difficulty": "קל / בינוני / מאתגר",
-  "prep_time": "זמן הכנה (לדוגמה: 15 דקות)",
-  "cook_time": "זמן בישול/אפייה (לדוגמה: 30 דקות)",
-  "total_time": "זמן כולל",
-  "ingredients": ["מרכיב 1 עם כמות מדויקת", "מרכיב 2 עם כמות מדויקת"],
-  "instructions": ["שלב 1 מפורט עם זמנים", "שלב 2 מפורט"],
-  "chef_tip": "טיפ מקצועי אחד שמשדרג את המתכון"
-}`
-      }]
-    });
-
-    const text = aiResponse.content[0].text.trim();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const recipe = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-
-    if (!recipe) return res.status(500).json({ error: 'שגיאה ביצירת המתכון' });
-    lastGeneratedTitle = recipe.title;
-    console.log(`Generated: [${cuisine}/${method}/${format}] → ${recipe.title}`);
-    res.json(recipe);
-  } catch (err) {
-    console.error('Generate error:', err.message);
-    res.status(500).json({ error: 'שגיאה ביצירת מתכון, נסה שוב' });
-  }
-});
 
 // קבלת פרטי מתכון מאתר מקור
 app.post('/api/recipe-details', async (req, res) => {
