@@ -615,6 +615,54 @@ app.post('/api/search-more-sources', async (req, res) => {
   }
 });
 
+app.get('/privacy', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookit — Privacy Policy</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; line-height: 1.7; }
+  h1 { color: #e67e22; } h2 { color: #555; margin-top: 2em; }
+  a { color: #e67e22; }
+</style>
+</head>
+<body>
+<h1>Cookit — Privacy Policy</h1>
+<p><strong>Effective date:</strong> May 23, 2026</p>
+
+<h2>1. What We Collect</h2>
+<p>Cookit does <strong>not</strong> create user accounts and does not store any personally identifiable information. The only data processed is the text you type into the chat (your ingredient lists and recipe requests), which is sent to our server to generate recipe suggestions.</p>
+
+<h2>2. How We Use Your Data</h2>
+<p>Your chat messages are forwarded to the Anthropic Claude API and the Serper search API solely to generate recipe responses. We do not store your chat history on our servers after the session ends. No data is sold or shared with third parties for advertising purposes.</p>
+
+<h2>3. Voice Input</h2>
+<p>If you use the voice input feature, audio is processed locally on your device by the operating system's speech recognition. We do not transmit or store audio recordings.</p>
+
+<h2>4. Cookies and Local Storage</h2>
+<p>Cookit uses your device's local storage only to remember your in-session chat history. This data never leaves your device.</p>
+
+<h2>5. Third-Party Services</h2>
+<ul>
+  <li><strong>Anthropic Claude API</strong> — recipe generation (<a href="https://www.anthropic.com/privacy" target="_blank">Privacy Policy</a>)</li>
+  <li><strong>Serper API</strong> — recipe search (<a href="https://serper.dev/privacy-policy" target="_blank">Privacy Policy</a>)</li>
+  <li><strong>Google Text-to-Speech API</strong> — voice output</li>
+</ul>
+
+<h2>6. Children's Privacy</h2>
+<p>Cookit is not directed at children under 13. We do not knowingly collect information from children.</p>
+
+<h2>7. Changes to This Policy</h2>
+<p>We may update this policy from time to time. The effective date at the top will reflect any changes.</p>
+
+<h2>8. Contact</h2>
+<p>Questions? Email us at <a href="mailto:toolkops@gmail.com">toolkops@gmail.com</a></p>
+</body>
+</html>`);
+});
+
 const PORT = process.env.PORT || 3000;
 app.get('/health', (req, res) => res.send('ok'));
 app.listen(PORT, '0.0.0.0', () => {
