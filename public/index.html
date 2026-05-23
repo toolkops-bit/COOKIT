@@ -419,7 +419,7 @@
   <h1>🍳 Cookit</h1>
   <p id="headerSubtitle">עוזר הבישול החכם שלך</p>
   <button id="btnVoiceToggle" onclick="toggleVoiceMode()" title="הפעל/כבה קול">🔇</button>
-  <button id="btnLang" onclick="toggleLang()">🌐 EN</button>
+
 </header>
 
 <div id="voiceBar">
@@ -480,8 +480,7 @@
     : '';
 
   // ── LANGUAGE ──
-  let appLang = localStorage.getItem('cookit_lang') ||
-    (navigator.language.startsWith('he') || navigator.language.startsWith('iw') ? 'he' : 'en');
+  const appLang = (navigator.language.startsWith('he') || navigator.language.startsWith('iw')) ? 'he' : 'en';
 
   const T = {
     he: {
@@ -578,12 +577,6 @@
     }
   };
 
-  function toggleLang() {
-    appLang = appLang === 'he' ? 'en' : 'he';
-    localStorage.setItem('cookit_lang', appLang);
-    applyLang();
-  }
-
   function applyLang() {
     const t = T[appLang];
     const isHe = appLang === 'he';
@@ -608,8 +601,6 @@
     if (inp) inp.placeholder = t.placeholder;
     const vh = document.getElementById('voiceHint');
     if (vh) vh.textContent = t.voice_hint;
-    const bl = document.getElementById('btnLang');
-    if (bl) bl.textContent = t.lang_btn;
     const vbl = document.getElementById('voiceBarLabel');
     if (vbl) vbl.textContent = t.voice_bar_label;
     _syncVoiceButtons();
