@@ -423,7 +423,7 @@
 </header>
 
 <div id="voiceBar">
-  <span>🗣️ תשובה קולית</span>
+  <span id="voiceBarLabel">🗣️ תשובה קולית</span>
   <button id="btnVoiceMain" onclick="toggleVoiceMode()">כבוי</button>
 </div>
 
@@ -527,6 +527,8 @@
       wa_ingredients: '*מרכיבים:*', wa_instructions: '*הוראות:*',
       wa_chef_tip: (tip) => `\n👨‍🍳 *טיפ השף:* ${tip}`, wa_footer: '\n_נשלח מ-Cookit 🍳_',
       speak_ingredients: 'מרכיבים', speak_instructions: 'הוראות הכנה',
+      voice_bar_label: '🗣️ תשובה קולית',
+      voice_btn_off: 'כבוי', voice_btn_on: 'פעיל',
     },
     en: {
       subtitle: 'Your smart cooking assistant',
@@ -571,6 +573,8 @@
       wa_ingredients: '*Ingredients:*', wa_instructions: '*Instructions:*',
       wa_chef_tip: (tip) => `\n👨‍🍳 *Chef's Tip:* ${tip}`, wa_footer: '\n_Sent from Cookit 🍳_',
       speak_ingredients: 'Ingredients', speak_instructions: 'Instructions',
+      voice_bar_label: '🗣️ Voice response',
+      voice_btn_off: 'Off', voice_btn_on: 'On',
     }
   };
 
@@ -606,6 +610,9 @@
     if (vh) vh.textContent = t.voice_hint;
     const bl = document.getElementById('btnLang');
     if (bl) bl.textContent = t.lang_btn;
+    const vbl = document.getElementById('voiceBarLabel');
+    if (vbl) vbl.textContent = t.voice_bar_label;
+    _syncVoiceButtons();
   }
 
   let history = [];
@@ -1134,7 +1141,7 @@
       qBtn.style.cssText = on ? 'background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border-color:transparent' : '';
     }
     if (oBtn) { oBtn.textContent = on ? T[appLang].voice_short : T[appLang].voice_short.replace('🔊','🔇'); oBtn.classList.toggle('on', on); }
-    if (mBtn) { mBtn.textContent = on ? T[appLang].voice_on : T[appLang].voice_off; mBtn.classList.toggle('on', on); }
+    if (mBtn) { mBtn.textContent = on ? T[appLang].voice_btn_on : T[appLang].voice_btn_off; mBtn.classList.toggle('on', on); }
   }
 
   // ── AUTO TTS FOR TEXT RESPONSES ──
