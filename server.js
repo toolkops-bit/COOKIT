@@ -564,8 +564,8 @@ imageQuery: 4-7 מילים באנגלית שמתארות בדיוק את המנ�
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
       system: isEn
-        ? `You are Cookit, a warm and enthusiastic cooking companion who genuinely loves food and loves helping people cook. Talk like a knowledgeable friend in the kitchen — casual, encouraging, and real. No bullet points, no headers, no asterisks, no numbered lists, no special formatting. Keep it short and natural. If someone asks for a recipe, warmly ask what they've got on hand. If they seem stuck, offer a quick tip or a fun idea.`
-        : `אתה Cookit, עוזר בישול חם ונלהב שאוהב אוכל באמת ואוהב לעזור לאנשים לבשל. דבר כמו חבר בקיא שנמצא איתך במטבח — קליל, מעודד, וטבעי. בלי כוכביות, בלי כותרות, בלי רשימות ממוספרות, בלי סימנים מיוחדים. קצר וזורם. אם מבקשים מתכון — שאל בצורה חמה מה יש להם בבית. אם נראה שהם תקועים — תציע טיפ מהיר או רעיון מגניב.`,
+        ? `You are Cookeat, a warm and enthusiastic cooking companion who genuinely loves food and loves helping people cook. Talk like a knowledgeable friend in the kitchen — casual, encouraging, and real. No bullet points, no headers, no asterisks, no numbered lists, no special formatting. Keep it short and natural. If someone asks for a recipe, warmly ask what they've got on hand. If they seem stuck, offer a quick tip or a fun idea.`
+        : `אתה Cookeat, עוזר בישול חם ונלהב שאוהב אוכל באמת ואוהב לעזור לאנשים לבשל. דבר כמו חבר בקיא שנמצא איתך במטבח — קליל, מעודד, וטבעי. בלי כוכביות, בלי כותרות, בלי רשימות ממוספרות, בלי סימנים מיוחדים. קצר וזורם. אם מבקשים מתכון — שאל בצורה חמה מה יש להם בבית. אם נראה שהם תקועים — תציע טיפ מהיר או רעיון מגניב.`,
       messages: msgs
     });
     return res.json({ type: 'text', text: chatRes.content[0].text });
@@ -621,7 +621,7 @@ app.get('/privacy', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cookit — Privacy Policy</title>
+<title>Cookeat — Privacy Policy</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; line-height: 1.7; }
   h1 { color: #e67e22; } h2 { color: #555; margin-top: 2em; }
@@ -629,11 +629,11 @@ app.get('/privacy', (req, res) => {
 </style>
 </head>
 <body>
-<h1>Cookit — Privacy Policy</h1>
+<h1>Cookeat — Privacy Policy</h1>
 <p><strong>Effective date:</strong> May 23, 2026</p>
 
 <h2>1. What We Collect</h2>
-<p>Cookit does <strong>not</strong> create user accounts and does not store any personally identifiable information. The only data processed is the text you type into the chat (your ingredient lists and recipe requests), which is sent to our server to generate recipe suggestions.</p>
+<p>Cookeat does <strong>not</strong> create user accounts and does not store any personally identifiable information. The only data processed is the text you type into the chat (your ingredient lists and recipe requests), which is sent to our server to generate recipe suggestions.</p>
 
 <h2>2. How We Use Your Data</h2>
 <p>Your chat messages are forwarded to the Anthropic Claude API and the Serper search API solely to generate recipe responses. We do not store your chat history on our servers after the session ends. No data is sold or shared with third parties for advertising purposes.</p>
@@ -642,7 +642,7 @@ app.get('/privacy', (req, res) => {
 <p>If you use the voice input feature, audio is processed locally on your device by the operating system's speech recognition. We do not transmit or store audio recordings.</p>
 
 <h2>4. Cookies and Local Storage</h2>
-<p>Cookit uses your device's local storage only to remember your in-session chat history. This data never leaves your device.</p>
+<p>Cookeat uses your device's local storage only to remember your in-session chat history. This data never leaves your device.</p>
 
 <h2>5. Third-Party Services</h2>
 <ul>
@@ -652,7 +652,7 @@ app.get('/privacy', (req, res) => {
 </ul>
 
 <h2>6. Children's Privacy</h2>
-<p>Cookit is not directed at children under 13. We do not knowingly collect information from children.</p>
+<p>Cookeat is not directed at children under 13. We do not knowingly collect information from children.</p>
 
 <h2>7. Changes to This Policy</h2>
 <p>We may update this policy from time to time. The effective date at the top will reflect any changes.</p>
