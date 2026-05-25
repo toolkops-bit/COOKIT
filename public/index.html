@@ -480,7 +480,8 @@
     : '';
 
   // ── LANGUAGE ──
-  const appLang = (navigator.language.startsWith('he') || navigator.language.startsWith('iw')) ? 'he' : 'en';
+  const _urlLang = new URLSearchParams(window.location.search).get('lang');
+  const appLang = _urlLang === 'en' ? 'en' : _urlLang === 'he' ? 'he' : (navigator.language.startsWith('he') || navigator.language.startsWith('iw')) ? 'he' : 'en';
 
   const T = {
     he: {
