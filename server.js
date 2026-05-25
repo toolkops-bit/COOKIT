@@ -420,7 +420,8 @@ app.post('/api/chat', async (req, res) => {
 - search: any request to search the internet / "find" / "look up" / "existing recipes"
 - generate: any request for AI chef / "create" / "make me" / "original recipe"
 - chat: only general cooking questions that are not recipe requests
-ingredients: array of ingredients — if continuation, extract from history
+ingredients: array of ingredients — if continuation, extract from history. Leave empty when user asks for a dish by name.
+query: search phrase — fill when user asks for a specific dish by name (e.g. "chocolate cake", "pasta bolognese", "simple cake for Shabbat"). Leave empty when user lists raw cooking ingredients.
 filters: array of style/diet/cuisine — include cuisines: "italian","greek","turkish","moroccan","asian","french","indian","spanish","mexican","japanese","lebanese","persian","american","mediterranean","argentinian","brazilian","thai","chinese","korean","vietnamese","ethiopian","german","russian" etc. Include diets: "vegan","vegetarian","gluten-free" etc.
 strictIngredients: true only if user said "only with what I have" / "no additions" / "only these ingredients"
 continuation: true if user asks for "another", "different", "new one", "try again", "one more" — reusing same ingredients from context, NOT providing new ones`
@@ -429,7 +430,8 @@ continuation: true if user asks for "another", "different", "new one", "try agai
 - search: כל בקשה לחיפוש מהאינטרנט / "חפש" / "מה יש באינטרנט" / "מתכונים קיימים" — גם ללא מרכיבים
 - generate: כל בקשה ל"שף AI" / "תיצור" / "מתכון מקורי" — גם ללא מרכיבים
 - chat: רק שאלות כלליות על בישול שאינן בקשת מתכון
-ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה
+ingredients: מערך המרכיבים — אם המשך שיחה, חלץ מההיסטוריה. השאר ריק כשהמשתמש מבקש מנה בשם.
+query: מונח חיפוש — מלא כשהמשתמש מבקש מנה ספציפית בשם (למשל "עוגה לשבת", "פסטה בולונז", "עוגה פשוטה"). השאר ריק כשמפרט מרכיבים גולמיים.
 filters: מערך של סגנון/דיאטה/מטבח — כולל מטבחים: "איטלקי","יווני","טורקי","מרוקאי","אסייתי","צרפתי","הודי","ספרדי","מקסיקני","יפני","לבנוני","פרסי","ישראלי","ים תיכוני","ארגנטינאי","ברזילאי","תאילנדי","סיני","קוריאני","וייטנאמי","אתיופי","גרמני","רוסי" וכו'. כלול גם דיאטות: "טבעוני","צמחוני","ללא גלוטן" וכו'
 strictIngredients: true רק אם המשתמש אמר "רק עם מה שיש לי" / "בלי תוספות" / "רק המרכיבים האלה"
 continuation: true אם המשתמש מבקש "עוד אחד", "אחר", "שונה", "נסה שוב", "עוד מתכון" — רוצה לשמור על אותם מרכיבים מהשיחה, לא מספק מרכיבים חדשים`,
@@ -466,28 +468,29 @@ continuation: true אם המשתמש מבקש "עוד אחד", "אחר", "שונ
       }
     }
 
-    // אם search/generate ללא מרכיבים — בקש מרכיבים
-    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !forcedMode && !continuationMode) {
+    // אם search/generate ללא מרכיבים ובלי query — בקש מרכיבים
+    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length === 0 && !intent.query && !forcedMode && !continuationMode) {
       if (isEn) {
         const modeEn = intent.action === 'search' ? 'search online' : 'create an AI recipe';
         return res.json({ type: 'text', text: `Sure! Tell me what ingredients you have and I'll ${modeEn}.` });
       }
-      const modeHe = intent.action === 'search' ? 'לחפש באינטרנט' : 'ליצור מתכון שף';
+      const modeHe = intent.action === 'search' ? 'אחפש באינטרנט' : 'אצור מתכון שף';
       return res.json({ type: 'text', text: `בשמחה! ספר לי אילו מרכיבים יש לך ואני ${modeHe}.` });
     }
 
-    // אם יש מרכיבים ולא נבחר מצב — שאל קודם
-    if ((intent.action === 'search' || intent.action === 'generate') && intent.ingredients.length > 0 && !forcedMode && !continuationMode) {
-      return res.json({ type: 'ask_mode', ingredients: intent.ingredients, filters: intent.filters });
+    // אם יש מרכיבים או query ולא נבחר מצב — שאל קודם
+    if ((intent.action === 'search' || intent.action === 'generate') && (intent.ingredients.length > 0 || intent.query) && !forcedMode && !continuationMode) {
+      return res.json({ type: 'ask_mode', ingredients: intent.ingredients, filters: intent.filters, query: intent.query || '' });
     }
 
     const effectiveAction = forcedMode || continuationMode || intent.action;
 
-    if ((effectiveAction === 'search') && intent.ingredients.length > 0) {
+    const searchQuery = req.body.searchQuery || intent.query || '';
+    if ((effectiveAction === 'search') && (intent.ingredients.length > 0 || searchQuery)) {
       const filterText = intent.filters.length > 0 ? ` ${intent.filters.join(' ')}` : '';
-      const q = isEn
-        ? `recipe with ${intent.ingredients.join(' ')}${filterText} cooking instructions`
-        : `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`;
+      const q = searchQuery
+        ? (isEn ? `${searchQuery}${filterText} recipe cooking instructions` : `${searchQuery}${filterText} מתכון הוראות הכנה`)
+        : (isEn ? `recipe with ${intent.ingredients.join(' ')}${filterText} cooking instructions` : `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`);
       const searchRes = await axios.post('https://google.serper.dev/search',
         { q, gl: isEn ? 'us' : 'il', hl: isEn ? 'en' : 'iw', num: 8 },
         { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }

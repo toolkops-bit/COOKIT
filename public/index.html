@@ -678,7 +678,7 @@
       if (data.type === 'ask_mode') {
         if (data.ingredients?.length) lastIngredients = data.ingredients;
         showQuickActions();
-        appendModeChoice(data.ingredients, data.filters || []);
+        appendModeChoice(data.ingredients, data.filters || [], data.query || '');
         history.push({ role: 'assistant', content: T[appLang].mode_speak(data.ingredients) });
       } else if (data.type === 'recipes') {
         if (data.ingredients?.length) lastIngredients = data.ingredients;
@@ -908,12 +908,12 @@
 
   const _modeChoices = {};
 
-  function appendModeChoice(ingredients, filters) {
+  function appendModeChoice(ingredients, filters, query) {
     const chat = document.getElementById('chatArea');
     const div = document.createElement('div');
     div.className = 'msg bot';
     const id = 'mode-' + Date.now();
-    _modeChoices[id] = { ingredients, filters };
+    _modeChoices[id] = { ingredients, filters, query: query || '' };
     const t = T[appLang];
     const question = t.mode_speak(ingredients);
     div.innerHTML = `<div class="avatar">🍳</div>
@@ -931,7 +931,7 @@
   }
 
   async function chooseMode(mode, choiceId) {
-    const { ingredients, filters } = _modeChoices[choiceId] || {};
+    const { ingredients, filters, query } = _modeChoices[choiceId] || {};
     if (!ingredients) return;
     pendingModeChoiceId = null;
     document.querySelectorAll(`#${choiceId} .btn-mode-choice`).forEach(b => b.disabled = true);
@@ -949,7 +949,7 @@
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: appLang === 'en' ? `find a recipe with ${ingredients.join(', ')}` : `תמצא מתכון עם ${ingredients.join(', ')}`, mode, ingredients, filters, history: history.slice(-8), lang: appLang })
+        body: JSON.stringify({ message: appLang === 'en' ? `find a recipe with ${ingredients.join(', ')}` : `תמצא מתכון עם ${ingredients.join(', ')}`, mode, ingredients, filters, searchQuery: query || '', history: history.slice(-8), lang: appLang })
       });
       const data = await res.json();
       removeTyping(typingId);
@@ -1117,8 +1117,20 @@
       .trim();
   }
 
+  function stopAllTTS() {
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      const TTS = window.Capacitor.Plugins.TextToSpeech;
+      if (TTS) try { TTS.stop(); } catch {}
+    }
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    isSpeaking = false;
+    document.querySelectorAll('.btn-speak-recipe').forEach(b => { b.classList.remove('speaking'); b.textContent = '🔊 קרא בקול'; });
+  }
+
   function toggleVoiceMode() {
     voiceEnabled = !voiceEnabled;
+    if (!voiceEnabled) stopAllTTS();
     _syncVoiceButtons();
   }
   function _syncVoiceButtons() {
