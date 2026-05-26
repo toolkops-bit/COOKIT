@@ -457,14 +457,12 @@ continuation: true אם המשתמש מבקש "עוד אחד", "אחר", "שונ
 
     // המשך שיחה: בקשה לעוד מתכון עם אותם מרכיבים
     let continuationMode = null;
-    if (!forcedMode && !forcedIngredients?.length && (intent.action === 'generate' || intent.action === 'search')) {
+    if (!forcedMode && !forcedIngredients?.length && lastIngredientsHint?.length > 0) {
       const isContinuation = intent.continuation ||
-        (intent.ingredients.length === 0 && lastIngredientsHint?.length > 0);
+        ((intent.action === 'generate' || intent.action === 'search') && intent.ingredients.length === 0);
       if (isContinuation) {
-        if (intent.ingredients.length === 0 && lastIngredientsHint?.length > 0) {
-          intent.ingredients = lastIngredientsHint;
-        }
-        continuationMode = intent.action;
+        if (intent.ingredients.length === 0) intent.ingredients = lastIngredientsHint;
+        continuationMode = intent.action === 'search' ? 'search' : 'generate';
       }
     }
 
@@ -490,7 +488,7 @@ continuation: true אם המשתמש מבקש "עוד אחד", "אחר", "שונ
       const filterText = intent.filters.length > 0 ? ` ${intent.filters.join(' ')}` : '';
       const q = searchQuery
         ? (isEn ? `${searchQuery}${filterText} recipe cooking instructions` : `${searchQuery}${filterText} מתכון הוראות הכנה`)
-        : (isEn ? `recipe with ${intent.ingredients.join(' ')}${filterText} cooking instructions` : `מתכון עם ${intent.ingredients.join(' ')}${filterText} הוראות הכנה`);
+        : (isEn ? `${intent.ingredients.join(' ')}${filterText} recipe cooking instructions` : `${intent.ingredients.join(' ')}${filterText} מתכון הוראות הכנה`);
       const searchRes = await axios.post('https://google.serper.dev/search',
         { q, gl: isEn ? 'us' : 'il', hl: isEn ? 'en' : 'iw', num: 8 },
         { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } }
@@ -513,6 +511,10 @@ Analyze search results and return JSON only:
       const m2 = aiRes.content[0].text.match(/\{[\s\S]*\}/);
       const parsed = m2 ? JSON.parse(m2[0]) : { recipes: [] };
       return res.json({ type: 'recipes', recipes: parsed.recipes || [], ingredients: intent.ingredients, filters: intent.filters });
+    }
+
+    if (effectiveAction === 'generate' && !forcedMode) {
+      return res.json({ type: 'use_stream', ingredients: intent.ingredients, filters: intent.filters });
     }
 
     if (effectiveAction === 'generate') {

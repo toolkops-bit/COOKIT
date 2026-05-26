@@ -1117,10 +1117,10 @@
       .trim();
   }
 
-  function stopAllTTS() {
+  async function stopAllTTS() {
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       const TTS = window.Capacitor.Plugins.TextToSpeech;
-      if (TTS) try { TTS.stop(); } catch {}
+      if (TTS) try { await TTS.stop(); } catch {}
     }
     if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
     if (window.speechSynthesis) speechSynthesis.cancel();
@@ -1128,9 +1128,9 @@
     document.querySelectorAll('.btn-speak-recipe').forEach(b => { b.classList.remove('speaking'); b.textContent = '🔊 קרא בקול'; });
   }
 
-  function toggleVoiceMode() {
+  async function toggleVoiceMode() {
     voiceEnabled = !voiceEnabled;
-    if (!voiceEnabled) stopAllTTS();
+    if (!voiceEnabled) await stopAllTTS();
     _syncVoiceButtons();
   }
   function _syncVoiceButtons() {
